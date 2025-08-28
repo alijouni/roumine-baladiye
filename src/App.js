@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { ReactComponent as OfficialLogo } from './baladiye-logo.svg'; 
+const apiKey = process.env.apiKey;
 // NOTE: In a real project, you would install these packages via npm/yarn.
 
 // --- ICONS & LOGOS (SVG Components) ---
 // Using SVG components instead of external files or base64 strings is more reliable.
-const OfficialLogo = ({ className }) => (
-    <svg className={className} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <style>{`.cls-1{fill:#4a5c3d;}.cls-2{fill:#8a795d;}`}</style>
-        </defs>
-        <path className="cls-1" d="M85.1,48.4c0,18.8-15.2,34-34,34s-34-15.2-34-34c0-1.8,0.1-3.5,0.4-5.2h67.2C84.9,44.9,85.1,46.6,85.1,48.4z"/>
-        <path className="cls-2" d="M51.1,17.6c-9.4,0-17,7.6-17,17s7.6,17,17,17s17-7.6,17-17S60.5,17.6,51.1,17.6z"/>
-        <text x="50%" y="95%" dominantBaseline="middle" textAnchor="middle" fill="#4A5C3D" fontSize="12" fontFamily="Cairo, sans-serif" fontWeight="bold">بلدية رومين</text>
-    </svg>
-);
+// const OfficialLogo = ({ className }) => (
+//     <svg className={className} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+//         <defs>
+//             <style>{`.cls-1{fill:#4a5c3d;}.cls-2{fill:#8a795d;}`}</style>
+//         </defs>
+//         <path className="cls-1" d="M85.1,48.4c0,18.8-15.2,34-34,34s-34-15.2-34-34c0-1.8,0.1-3.5,0.4-5.2h67.2C84.9,44.9,85.1,46.6,85.1,48.4z"/>
+//         <path className="cls-2" d="M51.1,17.6c-9.4,0-17,7.6-17,17s7.6,17,17,17s17-7.6,17-17S60.5,17.6,51.1,17.6z"/>
+//         <text x="50%" y="95%" dominantBaseline="middle" textAnchor="middle" fill="#4A5C3D" fontSize="12" fontFamily="Cairo, sans-serif" fontWeight="bold">بلدية رومين</text>
+//     </svg>
+// );
 
 
 // --- MOCK FIREBASE FOR DEMONSTRATION ---
@@ -54,9 +56,9 @@ const Header = ({ navigate, currentPage }) => {
     return (
         <header className="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-50">
             <div className="container mx-auto px-6 py-3 flex justify-between items-center">
-                <a href="#" className="flex items-center space-x-3" onClick={() => handleNavClick('home')}>
+                <a href="#" className="flex items-center space-x-2" onClick={() => handleNavClick('home')}>
                     <OfficialLogo className="h-14 w-auto" />
-                    <span className="text-xl font-bold text-gray-800 hidden sm:inline">بلدية رومين</span>
+                    <span className="mr-10 text-xl font-bold text-gray-800 hidden sm:inline">بلدية رومين</span>
                 </a>
                 <nav className="hidden md:flex items-center space-x-2">
                     {navLinks.map(link => (
@@ -174,7 +176,7 @@ const NewsPage = ({ news }) => (
             {news.length > 0 ? news.map(item => (
                 <div key={item.id} className="bg-white rounded-xl shadow-lg overflow-hidden transition-shadow hover:shadow-2xl flex flex-col md:flex-row">
                     <div className="w-full md:w-1/3">
-                        <img src={`https://placehold.co/400x300/345E40/FFFFFF?text=${encodeURIComponent(item.title)}`} alt={item.title} className="object-cover w-full h-full" />
+                        <img src={item.imageUrl} alt={item.title} className="object-cover w-full h-full" />
                     </div>
                     <div className="w-full md:w-2/3 p-6 md:p-8">
                         <p className="text-sm text-gray-500 mb-2">{item.date}</p>
@@ -256,6 +258,7 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, addNews, 
 
     const [newsTitle, setNewsTitle] = useState('');
     const [newsContent, setNewsContent] = useState('');
+    const [newsImage, setNewsImage] = useState(null);
     
     const [docTitle, setDocTitle] = useState('');
     const [docFile, setDocFile] = useState(null);
@@ -272,11 +275,16 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, addNews, 
     
     const onAddNews = (e) => {
         e.preventDefault();
-        if(!newsTitle || !newsContent) return;
+        if(!newsTitle || !newsContent || !newsImage) {
+            alert("يرجى ملء جميع الحقول واختيار صورة.");
+            return;
+        };
         const date = new Date().toLocaleDateString('ar-LB', { day: 'numeric', month: 'long', year: 'numeric' });
-        addNews({ title: newsTitle, content: newsContent, date });
+        addNews({ title: newsTitle, content: newsContent, date, imageFile: newsImage });
         setNewsTitle('');
         setNewsContent('');
+        setNewsImage(null);
+        e.target.reset();
     };
 
     const onAddDocument = (e) => {
@@ -327,6 +335,10 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, addNews, 
                     <form onSubmit={onAddNews} className="mb-6 space-y-4">
                         <input type="text" placeholder="عنوان الخبر" value={newsTitle} onChange={e => setNewsTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                         <textarea placeholder="محتوى الخبر" value={newsContent} onChange={e => setNewsContent(e.target.value)} rows="4" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                        <div>
+                            <label className="block text-gray-700 font-semibold mb-2">صورة الخبر</label>
+                            <input type="file" onChange={e => setNewsImage(e.target.files[0])} accept="image/*" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
+                        </div>
                         <button type="submit" className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700 transition-colors shadow-md">إضافة خبر</button>
                     </form>
                     <div className="space-y-4">
@@ -374,10 +386,10 @@ export default function App() {
     const [user, setUser] = useState(null); // User authentication state
     const [loading, setLoading] = useState(true);
 
-    // --- FIREBASE CONFIG (REPLACE WITH YOURS) ---
+    // --- FIREBASE CONFIGURATION ---
    const firebaseConfig = {
 
-  apiKey: "AIzaSyBwSaGxjRHRXCGrga5yN04-4Hxzrf-fqy0",
+  apiKey: apiKey,
 
   authDomain: "roumine-baladiye.firebaseapp.com",
 
@@ -417,11 +429,12 @@ export default function App() {
         setUser(null);
     };
 
-    const addNews = async (newsItem) => {
-        console.log("Adding news:", newsItem);
-        setNews(prev => [{ ...newsItem, id: Date.now().toString() }, ...prev]);
+   const addNews = async (newsItem) => {
+        const { title, content, date, imageFile } = newsItem;
+        const imageUrl = URL.createObjectURL(imageFile); // Create a temporary local URL for the image
+        const newNews = { id: Date.now().toString(), title, content, date, imageUrl };
+        setNews(prev => [newNews, ...prev]);
     };
-
     const deleteNews = async (id) => {
         console.log("Deleting news:", id);
         setNews(prev => prev.filter(item => item.id !== id));
