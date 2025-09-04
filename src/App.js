@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ReactComponent as OfficialLogo } from './baladiye-logo.svg'; 
+
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { auth, db, storage } from './firebase';
 import emailjs from '@emailjs/browser';
+
+import { ReactComponent as OfficialLogo } from './baladiye-logo.svg'; 
+import { ReactComponent as OfficialLogoInvert } from './baladiye-logo-invert.svg'; 
+import homeImage from './img/roumine_trees.jpg';
+import historicalRoumine from './img/historical_roumine.png';
+import roumineRoad from './img/roumine_road.jpg';
+import modernRoumine from './img/modern_roumine.jpg';
 
 
 // --- HELPER COMPONENTS ---
@@ -70,7 +77,7 @@ const Header = ({ navigate, currentPage }) => {
 const Footer = () => (
     <footer className="bg-gray-800 text-white">
         <div className="container mx-auto px-6 py-8 text-center flex flex-col items-center">
-            <OfficialLogo className="h-24 w-auto mb-4" />
+            <OfficialLogoInvert className="h-24 w-auto mb-4" />
             <p className="text-gray-300">&copy; {new Date().getFullYear()} بلدية رومين. جميع الحقوق محفوظة.</p>
             <p className="text-sm text-gray-400 mt-2">تم التصميم بعناية لمجتمعنا.</p>
         </div>
@@ -80,7 +87,7 @@ const Footer = () => (
 const HomePage = ({ navigate }) => (
     <PageWrapper>
         <div className="relative rounded-xl overflow-hidden h-[500px] mb-16 shadow-2xl">
-            <img src="https://placehold.co/1200x500/345E40/FFFFFF?text=غابات+السنديان+في+رومين" alt="غابات السنديان المحيطة برومين" className="w-full h-full object-cover" />
+            <img src={homeImage} alt="غابات السنديان المحيطة برومين" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end items-center text-white text-center p-10">
                 <h1 className="text-4xl md:text-6xl font-bold mb-4">أهلاً بكم في رومين</h1>
                 <p className="text-lg md:text-xl max-w-2xl">بلدة التاريخ العريق، والمجتمع النابض بالحياة، والطبيعة الهادئة في قلب جنوب لبنان.</p>
@@ -137,20 +144,66 @@ const ServiceCard = ({ icon, title, description, onClick }) => {
 
 const AboutPage = () => (
      <PageWrapper>
-            <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">عن رومين</h2>
-            <div className="bg-white p-8 md:p-12 rounded-xl shadow-xl overflow-hidden">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-12 items-center">
-                    <div className="md:col-span-3">
-                        <h3 className="text-3xl font-bold text-emerald-700 mb-4">تراث بلدتنا</h3>
-                        <p className="text-gray-600 leading-relaxed mb-4 text-lg">رومين، الواقعة في محافظة النبطية جنوب لبنان، هي بلدة تشتهر بجمالها الطبيعي الخلاب، وأبرزها غابات السنديان العريقة التي تغطي التلال المحيطة بها. يُعتقد أن اسم "رومين" نفسه له جذور تاريخية تعكس تنوع الثقافات التي مرت بهذه الأرض.</p>
-                        <p className="text-gray-600 leading-relaxed text-lg">مجتمعنا مبني على أساس القيم الأسرية القوية، والتقاليد الزراعية، والاحترام العميق لتراثنا الطبيعي. نحن فخورون بتاريخنا وملتزمون ببناء مستقبل مستدام ومزدهر لجميع السكان.</p>
-                    </div>
-                    <div className="md:col-span-2 flex flex-col items-center space-y-6">
-                        <img src="https://placehold.co/600x400/8A795D/FFFFFF?text=قرية+رومين" alt="منظر خلاب لبلدة رومين" className="rounded-lg shadow-md w-full h-auto object-cover"/>
-                        <OfficialLogo className="h-32 w-auto" />
-                    </div>
-                </div>
+ <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">عن رومين</h2>
+  <div className="bg-white p-8 md:p-12 rounded-xl shadow-xl overflow-hidden">
+    <div className="grid grid-cols-1 md:grid-cols-5 gap-12"> {/* Removed items-center from here */}
+      
+      {/* Images Column - now on the left for md and larger, stacked on mobile */}
+      <div className="md:col-span-2 flex flex-col items-center space-y-6 order-first md:order-first"> {/* order-first ensures it's first on mobile too */}
+        <img src={historicalRoumine} alt="رومين قديماً" className="w-full h-auto rounded-lg shadow-md" />
+        <img src={roumineRoad} alt="رومين في منتصف القرن" className="w-full h-auto rounded-lg shadow-md" />
+        <img src={modernRoumine} alt="بلدتنا اليوم" className="w-full h-auto rounded-lg shadow-md" />
+      </div>
+
+      {/* Text Column - now on the right for md and larger */}
+      <div className="md:col-span-3 order-last md:order-last"> {/* order-last ensures it's last on mobile too */}
+        <h3 className="text-3xl font-bold text-emerald-700 mb-4">تراث بلدتنا</h3>
+        
+        {/* The historical text starts here */}
+        <div className="text-gray-600 leading-relaxed mb-4 text-lg">
+            <p className="mb-4">
+                تقع بلدة رومين على تلال منبسطة في قضاء النبطية بجنوب لبنان، حاملةً في اسمها وتضاريسها شذرات من تاريخ منطقة جبل عامل العريقة. يستند تاريخها إلى مصادر متعددة، أبرزها المعاجم الجغرافية التاريخية لمنطقة جبل عامل، بالإضافة إلى الروايات الشفهية والآثار المكتشفة في أراضيها.
+            </p>
+
+            <h4 className="text-xl font-semibold text-gray-800 mt-6 mb-3">أصل التسمية ودلالاتها القديمة</h4>
+            <p className="mb-4">
+                يُرجّح المؤرخون، وعلى رأسهم الشيخ سليمان ظاهر في كتابه "معجم قرى جبل عامل"، أن اسم "رومين" يعود إلى أصل سرياني هو "Rawmin" (ܪܘܡܝܢ)، والذي يعني "الهضاب" أو "المرتفعات". يتطابق هذا التفسير مع الطبيعة الجغرافية للبلدة التي تقوم على مجموعة من التلال.
+            </p>
+            <p className="mb-4">
+                وإلى جانب هذا التفسير العلمي، تتداول رواية شعبية أن الاسم مرتبط بوجود روماني قديم في المنطقة، وأن "رومين" هي تحريف لكلمة "رومان". يدعم هذه الرواية وجود بعض الآثار في البلدة، مثل المغاور المدفنية والنواويس المحفورة في الصخر في منطقة "ظهر النسور" شمال البلدة، بالإضافة إلى أسطورة محلية تتحدث عن مغارة دُفن فيها ملك وملكة من العهد الروماني. وعلى الرغم من شيوع هذه الرواية، لم يتم العثور على آثار كبرى تؤكد وجود مدينة رومانية متكاملة في الموقع.
+            </p>
+
+            <h4 className="text-xl font-semibold text-gray-800 mt-6 mb-3">رومين في العهد العثماني: الإقطاع والملكية</h4>
+            <p className="mb-4">
+                كغيرها من قرى جبل عامل، خضعت رومين لنظام الإقطاع الذي كان سائدًا في العهد العثماني. وتشير المصادر التاريخية إلى أن أراضي البلدة كانت في فترة من الفترات مملوكة لعائلات إقطاعية نافذة في المنطقة. فقد ذكر الشيخ سليمان ظاهر أن قسماً كبيراً من أراضي رومين كان ملكاً لـ "حسن أفندي والحاج حسين الزين"، وهما من عائلة "آل الزين" التي كانت تمتلك نفوذاً واسعاً وأملاكاً شاسعة في عموم جبل عامل.
+            </p>
+             <p className="mb-4">
+                ولا يزال في البلدة حتى اليوم دار قديمة ذات طابع تراثي مسقوفة بالقرميد، يُقال إنها كانت ملكاً لإسماعيل الزين، أحد وجهاء العائلة. مع مرور الزمن وتغير الأنظمة السياسية والاجتماعية في لبنان، انتقلت ملكية هذه الأراضي تدريجياً من العائلات الإقطاعية إلى أهالي البلدة وسكانها.
+            </p>
+
+            <h4 className="text-xl font-semibold text-gray-800 mt-6 mb-3">التاريخ الاجتماعي والاقتصادي</h4>
+            <p className="mb-4">
+                اعتمد اقتصاد رومين تقليدياً على الزراعة، مستفيداً من أراضيها الخصبة ومناخها المتوسطي. وقد اشتهرت بزراعة الزيتون، الذي لا تزال أشجاره المعمرة تغطي أجزاء واسعة من أراضيها، بالإضافة إلى الكرمة والتين واللوز وبعض الزراعات الموسمية.
+            </p>
+            <p className="mb-4">
+            في العقود الأخيرة من القرن العشرين، برزت في رومين صناعة حرفية دقيقة، وهي صياغة الذهب والفضة، حيث عُرفت البلدة بوجود عدد من المعامل والورش التي عمل فيها أبناؤها واكتسبوا شهرة في هذا المجال. 
+             </p>
+
+            <h4 className="text-xl font-semibold text-gray-800 mt-6 mb-3">رومين في التاريخ الحديث</h4>
+            <p className="mb-4">
+                إدارياً، كانت رومين تتبع قديماً "إقليم التفاح"، وهو أحد التقسيمات التاريخية لمنطقة جبل عامل. أما في التقسيمات الإدارية الحديثة للدولة اللبنانية، فأصبحت جزءاً من قضاء النبطية في محافظة النبطية.
+            </p>
+            <p className="mb-4">
+                وكحال معظم القرى اللبنانية، شهدت رومين هجرة كبيرة لأبنائها، سواء إلى العاصمة بيروت أو إلى خارج لبنان، بحثاً عن فرص العلم والعمل، مما أثر على بنيتها الديموغرافية. ورغم ذلك، لا تزال البلدة مرتبطة بتاريخها وجذورها، محافظةً على طابعها القروي الهادئ ضمن السياق التاريخي والثقافي لمنطقة جبل عامل.
+            </p>
+            <div className="flex justify-center mt-12">
+            <OfficialLogo className="text-center h-32 w-auto" />
             </div>
+            
+        </div>
+      </div>
+    </div>
+  </div>
         </PageWrapper>
 );
 
@@ -159,11 +212,13 @@ const NewsPage = ({ news }) => (
         <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">أخبار وبيانات رسمية</h2>
         <div className="space-y-8">
             {news.length > 0 ? news.map(item => (
-                <div key={item.id} className="bg-white rounded-xl shadow-lg overflow-hidden transition-shadow hover:shadow-2xl flex flex-col md:flex-row">
-                    <div className="w-full md:w-1/3">
-                        <img src={item.imageUrl} alt={item.title} className="object-cover w-full h-full" />
+                <div key={item.id} className="bg-white rounded-xl shadow-lg overflow-hidden transition-shadow hover:shadow-2xl flex flex-col md:flex-row md:items-center">
+                    {/* --- Image Section (Modified) --- */}
+                    <div className="w-full md:w-1/4">
+                        <img src={item.imageUrl} alt={item.title} className="object-cover w-full" />
                     </div>
-                    <div className="w-full md:w-2/3 p-6 md:p-8">
+                    {/* --- Text Section (Modified) --- */}
+                    <div className="w-full md:w-3/4 p-6 md:p-8">
                         <p className="text-sm text-gray-500 mb-2">{item.date}</p>
                         <h3 className="text-2xl font-bold text-emerald-800 mb-3">{item.title}</h3>
                         <p className="text-gray-600 leading-relaxed">{item.content}</p>
