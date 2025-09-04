@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ReactComponent as OfficialLogo } from './baladiye-logo.svg'; 
-const apiKey = process.env.apiKey;
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { auth, db, storage } from './firebase';
+
 // NOTE: In a real project, you would install these packages via npm/yarn.
 
 // --- ICONS & LOGOS (SVG Components) ---
@@ -18,16 +22,17 @@ const apiKey = process.env.apiKey;
 
 
 // --- MOCK FIREBASE FOR DEMONSTRATION ---
-const mockDb = {
-    news: [
-        { id: '1', title: 'الإعلان عن مبادرة حديقة مجتمعية جديدة', content: 'يسر بلدية رومين أن تعلن عن إطلاق مشروع جديد لتطوير حديقة مجتمعية مركزية. يهدف المشروع إلى توفير مساحة خضراء للعائلات وسيضم ملعبًا ومسارات للمشي ومناطق للتنزه.', date: '26 آب 2025' },
-        { id: '2', title: 'بيان حول جدول صيانة الطرق', content: 'يرجى العلم بأن أعمال صيانة وتعبيد الطرق ستتم على الطريق الرئيسي المؤدي إلى البلدة من 1 إلى 5 أيلول. ننصح السكان باستخدام طرق بديلة ونعتذر عن أي إزعاج.', date: '15 آب 2025' },
-    ],
-    documents: [
-        { id: '1', title: 'طلب رخصة بناء', url: '#' },
-        { id: '2', title: 'نموذج تسجيل عمل تجاري', url: '#' },
-    ],
-};
+
+// const mockDb = {
+//     news: [
+//         { id: '1', title: 'الإعلان عن مبادرة حديقة مجتمعية جديدة', content: 'يسر بلدية رومين أن تعلن عن إطلاق مشروع جديد لتطوير حديقة مجتمعية مركزية. يهدف المشروع إلى توفير مساحة خضراء للعائلات وسيضم ملعبًا ومسارات للمشي ومناطق للتنزه.', date: '26 آب 2025' },
+//         { id: '2', title: 'بيان حول جدول صيانة الطرق', content: 'يرجى العلم بأن أعمال صيانة وتعبيد الطرق ستتم على الطريق الرئيسي المؤدي إلى البلدة من 1 إلى 5 أيلول. ننصح السكان باستخدام طرق بديلة ونعتذر عن أي إزعاج.', date: '15 آب 2025' },
+//     ],
+//     documents: [
+//         { id: '1', title: 'طلب رخصة بناء', url: '#' },
+//         { id: '2', title: 'نموذج تسجيل عمل تجاري', url: '#' },
+//     ],
+// };
 // --- END MOCK ---
 
 // --- HELPER COMPONENTS ---
@@ -380,75 +385,96 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, addNews, 
 
 export default function App() {
     // --- STATE MANAGEMENT ---
+        // --- STATE MANAGEMENT ---
     const [currentPage, setCurrentPage] = useState('home');
     const [news, setNews] = useState([]);
     const [documents, setDocuments] = useState([]);
-    const [user, setUser] = useState(null); // User authentication state
+    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // --- FIREBASE CONFIGURATION ---
-   const firebaseConfig = {
-
-  apiKey: apiKey,
-
-  authDomain: "roumine-baladiye.firebaseapp.com",
-
-  projectId: "roumine-baladiye",
-
-  storageBucket: "roumine-baladiye.firebasestorage.app",
-
-  messagingSenderId: "869623434206",
-
-  appId: "1:869623434206:web:ab77afcc03d7ed403feb4f",
-
-  measurementId: "G-T4PQB9W1FH"
-
-};
-
-    
-    // --- DATA FETCHING EFFECT ---
+    // --- FIREBASE AUTHENTICATION OBSERVER ---
     useEffect(() => {
-        setNews(mockDb.news);
-        setDocuments(mockDb.documents);
-        setLoading(false);
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            setLoading(false);
+        });
+        // Cleanup subscription on unmount
+        return () => unsubscribe();
     }, []);
 
-    // --- CMS FUNCTIONS ---
+    // --- DATA FETCHING FROM FIRESTORE ---
+    useEffect(() => {
+        const fetchNews = async () => {
+            const newsCollection = collection(db, "news");
+            const q = query(newsCollection, orderBy("createdAt", "desc")); // Order by creation time
+            const newsSnapshot = await getDocs(q);
+            const newsList = newsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setNews(newsList);
+        };
+
+        const fetchDocuments = async () => {
+            const documentsCollection = collection(db, "documents");
+            const q = query(documentsCollection, orderBy("createdAt", "desc")); // Order by creation time
+            const documentsSnapshot = await getDocs(q);
+            const documentsList = documentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setDocuments(documentsList);
+        };
+
+        fetchNews();
+        fetchDocuments();
+    }, []);
+
+
+    // --- CMS FUNCTIONS (Interacting with Firebase) ---
     
-    const handleLogin = async (email, password) => {
-        console.log("Logging in with", email, password);
-        if (email === "admin@roumine.gov.lb" && password === "password123") {
-             setUser({ email });
-             return Promise.resolve();
-        } else {
-             return Promise.reject(new Error("بيانات الاعتماد خاطئة."));
-        }
+    const handleLogin = (email, password) => {
+        return signInWithEmailAndPassword(auth, email, password);
     };
     
-    const handleLogout = async () => {
-        setUser(null);
+    const handleLogout = () => {
+        return signOut(auth);
     };
 
-   const addNews = async (newsItem) => {
+    const addNews = async (newsItem) => {
         const { title, content, date, imageFile } = newsItem;
-        const imageUrl = URL.createObjectURL(imageFile); // Create a temporary local URL for the image
-        const newNews = { id: Date.now().toString(), title, content, date, imageUrl };
-        setNews(prev => [newNews, ...prev]);
+        const imageRef = ref(storage, `news-images/${Date.now()}_${imageFile.name}`);
+        
+        await uploadBytes(imageRef, imageFile);
+        const imageUrl = await getDownloadURL(imageRef);
+
+        const newNews = { title, content, date, imageUrl, createdAt: new Date() };
+        const docRef = await addDoc(collection(db, "news"), newNews);
+
+        setNews(prev => [{ id: docRef.id, ...newNews }, ...prev]);
     };
+    
     const deleteNews = async (id) => {
-        console.log("Deleting news:", id);
+        const newsToDelete = news.find(item => item.id === id);
+        if (newsToDelete && newsToDelete.imageUrl) {
+            const imageRef = ref(storage, newsToDelete.imageUrl);
+            await deleteObject(imageRef); // Delete image from Storage
+        }
+        await deleteDoc(doc(db, "news", id)); // Delete document from Firestore
         setNews(prev => prev.filter(item => item.id !== id));
     };
     
     const addDocument = async ({ title, file }) => {
-        console.log("Uploading document:", title, file.name);
-        const newDoc = { id: Date.now().toString(), title, url: '#', filePath: `documents/${file.name}` };
-        setDocuments(prev => [{ ...newDoc }, ...prev]);
-        return Promise.resolve();
+        const filePath = `documents/${Date.now()}_${file.name}`;
+        const fileRef = ref(storage, filePath);
+        
+        await uploadBytes(fileRef, file);
+        const url = await getDownloadURL(fileRef);
+
+        const newDoc = { title, url, filePath, createdAt: new Date() };
+        const docRef = await addDoc(collection(db, "documents"), newDoc);
+        
+        setDocuments(prev => [{ id: docRef.id, ...newDoc }, ...prev]);
     };
     
     const deleteDocument = async (id, filePath) => {
-        console.log("Deleting document:", id, filePath);
+        const fileRef = ref(storage, filePath);
+        await deleteObject(fileRef); // Delete file from Storage
+        await deleteDoc(doc(db, "documents", id)); // Delete document from Firestore
         setDocuments(prev => prev.filter(doc => doc.id !== id));
     };
 
