@@ -1,39 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ReactComponent as OfficialLogo } from './baladiye-logo.svg'; 
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { auth, db, storage } from './firebase';
+import emailjs from '@emailjs/browser';
 
-// NOTE: In a real project, you would install these packages via npm/yarn.
-
-// --- ICONS & LOGOS (SVG Components) ---
-// Using SVG components instead of external files or base64 strings is more reliable.
-// const OfficialLogo = ({ className }) => (
-//     <svg className={className} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-//         <defs>
-//             <style>{`.cls-1{fill:#4a5c3d;}.cls-2{fill:#8a795d;}`}</style>
-//         </defs>
-//         <path className="cls-1" d="M85.1,48.4c0,18.8-15.2,34-34,34s-34-15.2-34-34c0-1.8,0.1-3.5,0.4-5.2h67.2C84.9,44.9,85.1,46.6,85.1,48.4z"/>
-//         <path className="cls-2" d="M51.1,17.6c-9.4,0-17,7.6-17,17s7.6,17,17,17s17-7.6,17-17S60.5,17.6,51.1,17.6z"/>
-//         <text x="50%" y="95%" dominantBaseline="middle" textAnchor="middle" fill="#4A5C3D" fontSize="12" fontFamily="Cairo, sans-serif" fontWeight="bold">بلدية رومين</text>
-//     </svg>
-// );
-
-
-// --- MOCK FIREBASE FOR DEMONSTRATION ---
-
-// const mockDb = {
-//     news: [
-//         { id: '1', title: 'الإعلان عن مبادرة حديقة مجتمعية جديدة', content: 'يسر بلدية رومين أن تعلن عن إطلاق مشروع جديد لتطوير حديقة مجتمعية مركزية. يهدف المشروع إلى توفير مساحة خضراء للعائلات وسيضم ملعبًا ومسارات للمشي ومناطق للتنزه.', date: '26 آب 2025' },
-//         { id: '2', title: 'بيان حول جدول صيانة الطرق', content: 'يرجى العلم بأن أعمال صيانة وتعبيد الطرق ستتم على الطريق الرئيسي المؤدي إلى البلدة من 1 إلى 5 أيلول. ننصح السكان باستخدام طرق بديلة ونعتذر عن أي إزعاج.', date: '15 آب 2025' },
-//     ],
-//     documents: [
-//         { id: '1', title: 'طلب رخصة بناء', url: '#' },
-//         { id: '2', title: 'نموذج تسجيل عمل تجاري', url: '#' },
-//     ],
-// };
-// --- END MOCK ---
 
 // --- HELPER COMPONENTS ---
 const PageWrapper = ({ children }) => (
@@ -49,6 +21,7 @@ const Header = ({ navigate, currentPage }) => {
         { id: 'about', text: 'عن رومين' },
         { id: 'news', text: 'أخبار وبيانات' },
         { id: 'permits', text: 'معاملات ورخص' },
+        { id: 'surveys', text: 'شكاوى واستمارات' }, // New Page Link
         { id: 'contact', text: 'تواصل معنا' },
         { id: 'admin', text: 'Admin' },
     ];
@@ -114,7 +87,7 @@ const HomePage = ({ navigate }) => (
             </div>
         </div>
         <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">خدمات البلدية</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <ServiceCard 
               icon="news" 
               title="آخر الأخبار" 
@@ -126,6 +99,12 @@ const HomePage = ({ navigate }) => (
               title="رخص ونماذج" 
               description="يمكنك الوصول إلى جميع الطلبات والتصاريح البلدية اللازمة." 
               onClick={() => navigate('permits')} 
+            />
+             <ServiceCard 
+              icon="surveys"
+              title="شكاوى واستمارات" 
+              description="شارك برأيك وقدم ملاحظاتك لتحسين بلدتنا."
+              onClick={() => navigate('surveys')} 
             />
             <ServiceCard 
               icon="contact" 
@@ -141,7 +120,8 @@ const ServiceCard = ({ icon, title, description, onClick }) => {
     const icons = {
         news: <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3h2m-4 3H9m-4 4h2m-4 4h2m4-8h2m-4 4h2m-4 4h2m4-8h2m-4 4h2m-4 4h2" /></svg>,
         docs: <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
-        contact: <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+        contact: <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
+        surveys: <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
     };
 
     return (
@@ -215,48 +195,193 @@ const PermitsPage = ({ documents }) => (
     </PageWrapper>
 );
 
-const ContactPage = () => (
-    <PageWrapper>
-        <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">تواصل معنا</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            <div className="bg-white p-8 rounded-xl shadow-xl">
-                <h3 className="text-3xl font-bold text-emerald-700 mb-6">مكتب البلدية</h3>
-                <div className="space-y-6 text-gray-600 text-lg">
-                    <p className="flex items-start"><svg className="w-7 h-7 ml-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg><span>الساحة الرئيسية، رومين، محافظة النبطية، لبنان</span></p>
-                    <p className="flex items-center"><svg className="w-7 h-7 ml-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg><span>+961 X XXX XXX</span></p>
-                    <p className="flex items-center"><svg className="w-7 h-7 ml-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg><span>info@roumine.gov.lb</span></p>
-                    <hr className="my-6 border-gray-200" />
-                    <h4 className="font-semibold text-xl text-gray-800">ساعات العمل:</h4>
-                    <p>الاثنين - الجمعة: 8:00 صباحًا - 4:00 مساءً</p>
-                    <p>السبت: 8:00 صباحًا - 1:00 ظهرًا</p>
+const ContactPage = () => {
+    const form = useRef();
+    const [statusMessage, setStatusMessage] = useState("");
+    const [isError, setIsError] = useState(false);
+    const [isSending, setIsSending] = useState(false);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        setIsSending(true);
+        setStatusMessage("");
+        setIsError(false);
+
+        const formData = new FormData(form.current);
+        const name = formData.get('name');
+        const email = formData.get('email');
+        const message = formData.get('message');
+        
+        if (!name || !email || !message) {
+            setStatusMessage("يرجى ملء جميع الحقول.");
+            setIsError(true);
+            setIsSending(false);
+            return;
+        }
+
+        emailjs.sendForm(
+            process.env.REACT_APP_EMAILJS_SERVICE_ID,
+            process.env.REACT_APP_EMAILJS_TEMPLATE_ID,
+            form.current,
+            process.env.REACT_APP_EMAILJS_PUBLIC_KEY
+        )
+        .then(() => {
+            console.log('Email successfully sent!');
+            return addDoc(collection(db, "messages"), {
+                name: name,
+                email: email,
+                message: message,
+                createdAt: serverTimestamp()
+            });
+        })
+        .then(() => {
+            console.log('Message saved to Firestore!');
+            setStatusMessage("تم إرسال رسالتك بنجاح!");
+            setIsError(false);
+            setIsSending(false);
+            form.current.reset();
+        })
+        .catch((err) => {
+            console.error('Failed to send message:', err);
+            setStatusMessage("فشل إرسال الرسالة. الرجاء المحاولة مرة أخرى.");
+            setIsError(true);
+            setIsSending(false);
+        });
+    };
+
+    return (
+        <PageWrapper>
+            <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">تواصل معنا</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="bg-white p-8 rounded-xl shadow-xl">
+                    <h3 className="text-3xl font-bold text-emerald-700 mb-6">مكتب البلدية</h3>
+                    <div className="space-y-6 text-gray-600 text-lg">
+                        <p className="flex items-start"><svg className="w-7 h-7 ml-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg><span>الساحة الرئيسية، رومين، محافظة النبطية، لبنان</span></p>
+                        <p className="flex items-center"><svg className="w-7 h-7 ml-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg><span>+961 X XXX XXX</span></p>
+                        <p className="flex items-center"><svg className="w-7 h-7 ml-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg><span>info@roumine.gov.lb</span></p>
+                        <hr className="my-6 border-gray-200" />
+                        <h4 className="font-semibold text-xl text-gray-800">ساعات العمل:</h4>
+                        <p>الاثنين - الجمعة: 8:00 صباحًا - 4:00 مساءً</p>
+                        <p>السبت: 8:00 صباحًا - 1:00 ظهرًا</p>
+                    </div>
+                </div>
+                <div className="bg-white p-8 rounded-xl shadow-xl">
+                    <h3 className="text-3xl font-bold text-emerald-700 mb-6">أرسل لنا رسالة</h3>
+                    <form ref={form} onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <label htmlFor="name" className="block text-gray-700 font-semibold mb-2">الاسم الكامل</label>
+                            <input type="text" id="name" name="name" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" required />
+                        </div>
+                        <div>
+                            <label htmlFor="email" className="block text-gray-700 font-semibold mb-2">البريد الإلكتروني</label>
+                            <input type="email" id="email" name="email" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" required />
+                        </div>
+                        <div>
+                            <label htmlFor="message" className="block text-gray-700 font-semibold mb-2">الرسالة</label>
+                            <textarea id="message" name="message" rows="5" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" required></textarea>
+                        </div>
+                        <button type="submit" disabled={isSending} className="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1 disabled:bg-emerald-300">
+                             {isSending ? 'جار الإرسال...' : 'إرسال الرسالة'}
+                        </button>
+                        {statusMessage && (
+                            <p className={`text-center font-medium ${isError ? 'text-red-600' : 'text-green-600'}`}>
+                                {statusMessage}
+                            </p>
+                        )}
+                    </form>
                 </div>
             </div>
-            <div className="bg-white p-8 rounded-xl shadow-xl">
-                <h3 className="text-3xl font-bold text-emerald-700 mb-6">أرسل لنا رسالة</h3>
-                <form action="#" method="POST" onSubmit={(e) => e.preventDefault()} className="space-y-6">
-                    <div>
-                        <label htmlFor="name" className="block text-gray-700 font-semibold mb-2">الاسم الكامل</label>
-                        <input type="text" id="name" name="name" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" required />
-                    </div>
-                    <div>
-                        <label htmlFor="email" className="block text-gray-700 font-semibold mb-2">البريد الإلكتروني</label>
-                        <input type="email" id="email" name="email" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" required />
-                    </div>
-                    <div>
-                        <label htmlFor="message" className="block text-gray-700 font-semibold mb-2">الرسالة</label>
-                        <textarea id="message" name="message" rows="5" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" required></textarea>
-                    </div>
-                    <button type="submit" className="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1">
-                        إرسال الرسالة
-                    </button>
-                </form>
+        </PageWrapper>
+    );
+};
+
+// --- NEW COMPLAINTS AND SURVEYS PAGE ---
+const ComplaintsAndSurveysPage = ({ surveys, addComplaint }) => {
+    const [name, setName] = useState('');
+    const [contact, setContact] = useState('');
+    const [subject, setSubject] = useState('');
+    const [message, setMessage] = useState('');
+    const [status, setStatus] = useState('');
+    const [isError, setIsError] = useState(false);
+
+    const handleComplaintSubmit = async (e) => {
+        e.preventDefault();
+        if(!name || !contact || !subject || !message) {
+            setStatus("يرجى ملء جميع الحقول.");
+            setIsError(true);
+            return;
+        }
+        
+        try {
+            await addComplaint({ name, contact, subject, message });
+            setStatus("تم إرسال الشكوى بنجاح. شكراً لمساهمتكم.");
+            setIsError(false);
+            setName('');
+            setContact('');
+            setSubject('');
+            setMessage('');
+        } catch (error) {
+            console.error("Error submitting complaint: ", error);
+            setStatus("حدث خطأ أثناء إرسال الشكوى. يرجى المحاولة مرة أخرى.");
+            setIsError(true);
+        }
+    };
+
+    return (
+        <PageWrapper>
+            <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">شكاوى واستمارات</h2>
+
+            {/* Surveys Section */}
+            <div className="mb-16">
+                <h3 className="text-3xl font-bold text-emerald-700 mb-6 border-b-2 border-emerald-200 pb-3">استمارات واستطلاعات رأي</h3>
+                <p className="text-center text-gray-500 max-w-2xl mx-auto mb-8">نقدر رأيكم ومشاركتكم في تحسين بلدتنا. يرجى المشاركة في الاستطلاعات المتاحة أدناه.</p>
+                 <div className="space-y-4">
+                    {surveys.length > 0 ? surveys.map(survey => (
+                        <div key={survey.id} className="bg-white p-5 rounded-xl shadow-lg flex justify-between items-center transition-shadow hover:shadow-xl">
+                            <p className="font-semibold text-lg text-gray-800">{survey.title}</p>
+                            <a href={survey.link} target="_blank" rel="noopener noreferrer" className="bg-emerald-600 text-white font-bold py-2 px-6 rounded-full hover:bg-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1">
+                                ابدأ الاستطلاع
+                            </a>
+                        </div>
+                    )) : <p className="text-center text-gray-600 py-4">لا توجد استطلاعات متاحة حالياً.</p>}
+                </div>
             </div>
-        </div>
-    </PageWrapper>
-);
 
+            {/* Complaints Section */}
+            <div>
+                <h3 className="text-3xl font-bold text-emerald-700 mb-6 border-b-2 border-emerald-200 pb-3">تقديم شكوى أو اقتراح</h3>
+                <p className="text-center text-gray-500 max-w-2xl mx-auto mb-8">إذا كان لديكم أي شكوى، ملاحظة، أو اقتراح، يمكنكم تقديمه هنا مباشرةً وسيتم مراجعته من قبل الفريق المختص في البلدية.</p>
+                <div className="bg-white p-8 rounded-xl shadow-xl max-w-2xl mx-auto">
+                    <form onSubmit={handleComplaintSubmit} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-gray-700 font-semibold mb-2">الاسم الكامل</label>
+                                <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" required/>
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 font-semibold mb-2">معلومات الاتصال (هاتف أو بريد إلكتروني)</label>
+                                <input type="text" value={contact} onChange={e => setContact(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" required/>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 font-semibold mb-2">الموضوع</label>
+                            <input type="text" value={subject} onChange={e => setSubject(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" required/>
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 font-semibold mb-2">تفاصيل الشكوى/الاقتراح</label>
+                            <textarea value={message} onChange={e => setMessage(e.target.value)} rows="5" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" required></textarea>
+                        </div>
+                        <button type="submit" className="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-all duration-300 shadow-md">إرسال</button>
+                        {status && <p className={`text-center mt-4 ${isError ? 'text-red-500' : 'text-green-600'}`}>{status}</p>}
+                    </form>
+                </div>
+            </div>
 
-const AdminPage = ({ user, handleLogin, handleLogout, news, documents, addNews, deleteNews, addDocument, deleteDocument }) => {
+        </PageWrapper>
+    );
+};
+
+const AdminPage = ({ user, handleLogin, handleLogout, news, documents, surveys, complaints, addNews, deleteNews, addDocument, deleteDocument, addSurvey, deleteSurvey }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -268,6 +393,9 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, addNews, 
     const [docTitle, setDocTitle] = useState('');
     const [docFile, setDocFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
+
+    const [surveyTitle, setSurveyTitle] = useState('');
+    const [surveyLink, setSurveyLink] = useState('');
 
     const onLogin = (e) => {
         e.preventDefault();
@@ -299,10 +427,17 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, addNews, 
         addDocument({ title: docTitle, file: docFile }).then(() => {
             setDocTitle('');
             setDocFile(null);
-            e.target.reset(); // Reset file input
+            e.target.reset(); 
         }).finally(() => setIsUploading(false));
     };
 
+    const onAddSurvey = (e) => {
+        e.preventDefault();
+        if (!surveyTitle || !surveyLink) return;
+        addSurvey({ title: surveyTitle, link: surveyLink });
+        setSurveyTitle('');
+        setSurveyLink('');
+    };
 
     if (!user) {
         return (
@@ -334,45 +469,83 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, addNews, 
                     <button onClick={handleLogout} className="bg-red-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-red-700 transition-colors shadow-md">تسجيل الخروج</button>
                 </div>
 
-                {/* Manage News */}
-                <div className="bg-white p-8 rounded-xl shadow-xl mb-12">
-                    <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة الأخبار</h3>
-                    <form onSubmit={onAddNews} className="mb-6 space-y-4">
-                        <input type="text" placeholder="عنوان الخبر" value={newsTitle} onChange={e => setNewsTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-                        <textarea placeholder="محتوى الخبر" value={newsContent} onChange={e => setNewsContent(e.target.value)} rows="4" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
-                        <div>
-                            <label className="block text-gray-700 font-semibold mb-2">صورة الخبر</label>
-                            <input type="file" onChange={e => setNewsImage(e.target.files[0])} accept="image/*" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div>
+                        {/* Manage News */}
+                        <div className="bg-white p-8 rounded-xl shadow-xl mb-12">
+                            <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة الأخبار</h3>
+                            <form onSubmit={onAddNews} className="mb-6 space-y-4">
+                                <input type="text" placeholder="عنوان الخبر" value={newsTitle} onChange={e => setNewsTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                                <textarea placeholder="محتوى الخبر" value={newsContent} onChange={e => setNewsContent(e.target.value)} rows="4" className="w-full px-4 py-3 border border-gray-300 rounded-lg"></textarea>
+                                <div>
+                                    <label className="block text-gray-700 font-semibold mb-2">صورة الخبر</label>
+                                    <input type="file" onChange={e => setNewsImage(e.target.files[0])} accept="image/*" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
+                                </div>
+                                <button type="submit" className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700">إضافة خبر</button>
+                            </form>
+                            <div className="space-y-4 max-h-60 overflow-y-auto">
+                                {news.map(item => (
+                                    <div key={item.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
+                                        <span className="font-semibold text-gray-700">{item.title}</span>
+                                        <button onClick={() => deleteNews(item.id)} className="text-red-500 hover:text-red-700 font-semibold">حذف</button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                        <button type="submit" className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700 transition-colors shadow-md">إضافة خبر</button>
-                    </form>
-                    <div className="space-y-4">
-                        {news.map(item => (
-                            <div key={item.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
-                                <span className="font-semibold text-gray-700">{item.title}</span>
-                                <button onClick={() => deleteNews(item.id)} className="text-red-500 hover:text-red-700 font-semibold">حذف</button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
 
-                {/* Manage Documents */}
-                <div className="bg-white p-8 rounded-xl shadow-xl">
-                    <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة المعاملات والرخص</h3>
-                    <form onSubmit={onAddDocument} className="mb-6 space-y-4">
-                        <input type="text" placeholder="عنوان المستند" value={docTitle} onChange={e => setDocTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-                        <input type="file" onChange={e => setDocFile(e.target.files[0])} accept=".pdf" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
-                        <button type="submit" disabled={isUploading} className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700 transition-colors shadow-md disabled:bg-gray-400">
-                            {isUploading ? 'جاري الرفع...' : 'إضافة مستند'}
-                        </button>
-                    </form>
-                     <div className="space-y-4">
-                        {documents.map(doc => (
-                            <div key={doc.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
-                                <span className="font-semibold text-gray-700">{doc.title}</span>
-                                <button onClick={() => deleteDocument(doc.id, doc.filePath)} className="text-red-500 hover:text-red-700 font-semibold">حذف</button>
+                        {/* Manage Documents */}
+                        <div className="bg-white p-8 rounded-xl shadow-xl mb-12">
+                             <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة المعاملات والرخص</h3>
+                            <form onSubmit={onAddDocument} className="mb-6 space-y-4">
+                                <input type="text" placeholder="عنوان المستند" value={docTitle} onChange={e => setDocTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                                <input type="file" onChange={e => setDocFile(e.target.files[0])} accept=".pdf" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
+                                <button type="submit" disabled={isUploading} className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700 disabled:bg-gray-400">
+                                    {isUploading ? 'جاري الرفع...' : 'إضافة مستند'}
+                                </button>
+                            </form>
+                             <div className="space-y-4 max-h-60 overflow-y-auto">
+                                {documents.map(doc => (
+                                    <div key={doc.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
+                                        <span className="font-semibold text-gray-700">{doc.title}</span>
+                                        <button onClick={() => deleteDocument(doc.id, doc.filePath)} className="text-red-500 hover:text-red-700 font-semibold">حذف</button>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                        </div>
+                         {/* Manage Surveys */}
+                        <div className="bg-white p-8 rounded-xl shadow-xl">
+                            <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة الاستمارات</h3>
+                            <form onSubmit={onAddSurvey} className="mb-6 space-y-4">
+                                <input type="text" placeholder="عنوان الاستمارة" value={surveyTitle} onChange={e => setSurveyTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                                <input type="url" placeholder="رابط Microsoft Forms" value={surveyLink} onChange={e => setSurveyLink(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                                <button type="submit" className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700">إضافة استمارة</button>
+                            </form>
+                            <div className="space-y-4 max-h-60 overflow-y-auto">
+                                {surveys.map(survey => (
+                                    <div key={survey.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
+                                        <span className="font-semibold text-gray-700">{survey.title}</span>
+                                        <button onClick={() => deleteSurvey(survey.id)} className="text-red-500 hover:text-red-700 font-semibold">حذف</button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    {/* View Complaints */}
+                    <div className="bg-white p-8 rounded-xl shadow-xl">
+                        <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">الشكاوى والاقتراحات الواردة</h3>
+                        <div className="space-y-4 max-h-[800px] overflow-y-auto">
+                             {complaints.length > 0 ? complaints.map(complaint => (
+                                <div key={complaint.id} className="p-4 bg-gray-50 rounded-lg border">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h4 className="font-bold text-gray-800">{complaint.subject}</h4>
+                                        <span className="text-xs text-gray-500">{complaint.createdAt?.toDate().toLocaleDateString('ar-LB')}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mb-1"><strong>من:</strong> {complaint.name}</p>
+                                    <p className="text-sm text-gray-600 mb-3"><strong>للتواصل:</strong> {complaint.contact}</p>
+                                    <p className="text-gray-700 whitespace-pre-wrap">{complaint.message}</p>
+                                </div>
+                            )) : <p className="text-center text-gray-500">لا توجد شكاوى حالياً.</p>}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -385,10 +558,11 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, addNews, 
 
 export default function App() {
     // --- STATE MANAGEMENT ---
-        // --- STATE MANAGEMENT ---
     const [currentPage, setCurrentPage] = useState('home');
     const [news, setNews] = useState([]);
     const [documents, setDocuments] = useState([]);
+    const [surveys, setSurveys] = useState([]);
+    const [complaints, setComplaints] = useState([]);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -398,42 +572,45 @@ export default function App() {
             setUser(currentUser);
             setLoading(false);
         });
-        // Cleanup subscription on unmount
         return () => unsubscribe();
     }, []);
 
     // --- DATA FETCHING FROM FIRESTORE ---
     useEffect(() => {
-        const fetchNews = async () => {
+        const fetchData = async () => {
+            // Fetch News
             const newsCollection = collection(db, "news");
-            const q = query(newsCollection, orderBy("createdAt", "desc")); // Order by creation time
-            const newsSnapshot = await getDocs(q);
-            const newsList = newsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setNews(newsList);
-        };
+            const newsQuery = query(newsCollection, orderBy("createdAt", "desc"));
+            const newsSnapshot = await getDocs(newsQuery);
+            setNews(newsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-        const fetchDocuments = async () => {
+            // Fetch Documents
             const documentsCollection = collection(db, "documents");
-            const q = query(documentsCollection, orderBy("createdAt", "desc")); // Order by creation time
-            const documentsSnapshot = await getDocs(q);
-            const documentsList = documentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setDocuments(documentsList);
+            const docQuery = query(documentsCollection, orderBy("createdAt", "desc"));
+            const documentsSnapshot = await getDocs(docQuery);
+            setDocuments(documentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            
+            // Fetch Surveys
+            const surveysCollection = collection(db, "surveys");
+            const surveyQuery = query(surveysCollection, orderBy("createdAt", "desc"));
+            const surveysSnapshot = await getDocs(surveyQuery);
+            setSurveys(surveysSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+            // Fetch Complaints
+            const complaintsCollection = collection(db, "complaints");
+            const complaintQuery = query(complaintsCollection, orderBy("createdAt", "desc"));
+            const complaintsSnapshot = await getDocs(complaintQuery);
+            setComplaints(complaintsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         };
 
-        fetchNews();
-        fetchDocuments();
+        fetchData();
     }, []);
 
 
     // --- CMS FUNCTIONS (Interacting with Firebase) ---
     
-    const handleLogin = (email, password) => {
-        return signInWithEmailAndPassword(auth, email, password);
-    };
-    
-    const handleLogout = () => {
-        return signOut(auth);
-    };
+    const handleLogin = (email, password) => signInWithEmailAndPassword(auth, email, password);
+    const handleLogout = () => signOut(auth);
 
     const addNews = async (newsItem) => {
         const { title, content, date, imageFile } = newsItem;
@@ -452,9 +629,9 @@ export default function App() {
         const newsToDelete = news.find(item => item.id === id);
         if (newsToDelete && newsToDelete.imageUrl) {
             const imageRef = ref(storage, newsToDelete.imageUrl);
-            await deleteObject(imageRef); // Delete image from Storage
+            await deleteObject(imageRef).catch(err => console.error("Error deleting image:", err));
         }
-        await deleteDoc(doc(db, "news", id)); // Delete document from Firestore
+        await deleteDoc(doc(db, "news", id));
         setNews(prev => prev.filter(item => item.id !== id));
     };
     
@@ -473,9 +650,28 @@ export default function App() {
     
     const deleteDocument = async (id, filePath) => {
         const fileRef = ref(storage, filePath);
-        await deleteObject(fileRef); // Delete file from Storage
-        await deleteDoc(doc(db, "documents", id)); // Delete document from Firestore
+        await deleteObject(fileRef).catch(err => console.error("Error deleting file:", err));
+        await deleteDoc(doc(db, "documents", id));
         setDocuments(prev => prev.filter(doc => doc.id !== id));
+    };
+
+    const addSurvey = async (survey) => {
+        const newSurvey = { ...survey, createdAt: new Date() };
+        const docRef = await addDoc(collection(db, "surveys"), newSurvey);
+        setSurveys(prev => [{ id: docRef.id, ...newSurvey }, ...prev]);
+    };
+
+    const deleteSurvey = async (id) => {
+        await deleteDoc(doc(db, "surveys", id));
+        setSurveys(prev => prev.filter(survey => survey.id !== id));
+    };
+
+    const addComplaint = async (complaint) => {
+        const newComplaint = { ...complaint, createdAt: serverTimestamp() };
+        await addDoc(collection(db, "complaints"), newComplaint);
+        // We don't need to update local state for the user, but we'll refetch for admin
+        const complaintsSnapshot = await getDocs(query(collection(db, "complaints"), orderBy("createdAt", "desc")));
+        setComplaints(complaintsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
 
 
@@ -491,16 +687,21 @@ export default function App() {
             case 'news': return <NewsPage news={news} />;
             case 'permits': return <PermitsPage documents={documents} />;
             case 'contact': return <ContactPage />;
+            case 'surveys': return <ComplaintsAndSurveysPage surveys={surveys} addComplaint={addComplaint} />;
             case 'admin': return <AdminPage 
                                     user={user} 
                                     handleLogin={handleLogin} 
                                     handleLogout={handleLogout}
                                     news={news}
                                     documents={documents}
+                                    surveys={surveys}
+                                    complaints={complaints}
                                     addNews={addNews}
                                     deleteNews={deleteNews}
                                     addDocument={addDocument}
                                     deleteDocument={deleteDocument}
+                                    addSurvey={addSurvey}
+                                    deleteSurvey={deleteSurvey}
                                 />;
             case 'home':
             default:
