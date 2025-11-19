@@ -1059,11 +1059,15 @@ const addSurvey = async (survey) => {
     };
 
     const addComplaint = async (complaint) => {
-        const newComplaint = { ...complaint, createdAt: serverTimestamp(),status: 'pending' };
+        const newComplaint = { ...complaint, createdAt: serverTimestamp(), status: 'pending' };
         await addDoc(collection(db, "complaints"), newComplaint);
-        // We don't need to update local state for the user, but we'll refetch for admin
-        const complaintsSnapshot = await getDocs(query(collection(db, "complaints"), orderBy("createdAt", "desc")));
-        setComplaints(complaintsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        
+        // FIX: Only fetch the updated list if the user is an Admin (logged in).
+        // Standard users don't need to see the list of complaints.
+        if (user) {
+            const complaintsSnapshot = await getDocs(query(collection(db, "complaints"), orderBy("createdAt", "desc")));
+            setComplaints(complaintsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }
     };
 
     const updateComplaintStatus = async (id, newStatus) => {
