@@ -1,0 +1,32 @@
+[
+  {
+    "fullName": "علي حسن جوني",
+    "propertyNumber": "101",
+    "location": "حي الساحة",
+    "dueFee": 1500000
+  },
+  {
+    "fullName": "فاطمة محمد قاسم",
+    "propertyNumber": "205",
+    "location": "طريق العين",
+    "dueFee": 2250000
+  },
+  {
+    "fullName": "حسين علي زين",
+    "propertyNumber": "330",
+    "location": "الحارة الفوقا",
+    "dueFee": 950000
+  },
+  {
+    "fullName": "مريم يوسف ضاهر",
+    "propertyNumber": "412",
+    "location": "الشارع العام",
+    "dueFee": 3000000
+  },
+  {
+    "fullName": "محمد سمير قانصو",
+    "propertyNumber": "550",
+    "location": "",
+    "dueFee": 750000
+  }
+]

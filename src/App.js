@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy, serverTimestamp, where, writeBatch, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { auth, db, storage } from './firebase';
 import emailjs from '@emailjs/browser';
@@ -9,7 +9,7 @@ import emailjs from '@emailjs/browser';
 import { ReactComponent as OfficialLogo } from './baladiye-logo.svg'; 
 import { ReactComponent as OfficialLogoInvert } from './baladiye-logo-invert.svg'; 
 import homeImage from './img/roumine_trees.jpg';
-import historicalRoumine from './img/historical_roumine.png';
+import historicalRoumine from './img/historical_roumine.jpg';
 import roumineRoad from './img/roumine_road.jpg';
 import modernRoumine from './img/modern_roumine.jpg';
 
@@ -23,12 +23,13 @@ const PageWrapper = ({ children }) => (
 
 const Header = ({ navigate, currentPage }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const navLinks = [
+   const navLinks = [
         { id: 'home', text: 'الرئيسية' },
         { id: 'about', text: 'عن رومين' },
         { id: 'news', text: 'أخبار وبيانات' },
-        { id: 'permits', text: 'معاملات ورخص' },
-        { id: 'surveys', text: 'شكاوى واستمارات' }, // New Page Link
+        { id: 'permits', text: 'معاملات ونماذج' },
+        { id: 'fees', text: 'الرسوم البلدية' }, // --- NEW PAGE LINK ---
+        { id: 'surveys', text: 'شكاوى واستمارات' },
         { id: 'contact', text: 'تواصل معنا' },
         { id: 'admin', text: 'Admin' },
     ];
@@ -103,32 +104,41 @@ const HomePage = ({ navigate }) => (
             />
             <ServiceCard 
               icon="docs" 
-              title="رخص ونماذج" 
+              title="معاملات ونماذج" 
               description="يمكنك الوصول إلى جميع الطلبات والتصاريح البلدية اللازمة." 
               onClick={() => navigate('permits')} 
             />
-             <ServiceCard 
+            {/* --- NEW SERVICE CARD --- */}
+            <ServiceCard 
+              icon="fees"
+              title="الرسوم البلدية" 
+              description="الاستعلام عن الرسوم البلدية المتوجبة على القيمة التأجيرية."
+              onClick={() => navigate('fees')} 
+            />
+            <ServiceCard 
               icon="surveys"
               title="شكاوى واستمارات" 
               description="شارك برأيك وقدم ملاحظاتك لتحسين بلدتنا."
               onClick={() => navigate('surveys')} 
             />
-            <ServiceCard 
+            {/* --- MOVED CONTACT TO END FOR BETTER GRID FILL --- */}
+            {/* <ServiceCard 
               icon="contact" 
               title="تواصل معنا" 
               description="تواصل مع المكتب البلدي للاستفسارات والدعم." 
               onClick={() => navigate('contact')} 
-            />
+            /> */}
         </div>
     </PageWrapper>
 );
 
 const ServiceCard = ({ icon, title, description, onClick }) => {
-    const icons = {
+   const icons = {
         news: <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3h2m-4 3H9m-4 4h2m-4 4h2m4-8h2m-4 4h2m-4 4h2m4-8h2m-4 4h2m-4 4h2" /></svg>,
         docs: <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
         contact: <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
-        surveys: <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+        surveys: <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>,
+        fees: <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg> // --- NEW ICON ---
     };
 
     return (
@@ -231,8 +241,8 @@ const NewsPage = ({ news }) => (
 
 const PermitsPage = ({ documents }) => (
     <PageWrapper>
-        <h2 className="text-4xl font-bold text-center text-gray-800 mb-6">معاملات ورخص</h2>
-        <p className="text-center text-gray-500 max-w-2xl mx-auto mb-12">هنا يمكنك العثور على جميع النماذج اللازمة للخدمات البلدية وتنزيلها. يرجى تقديم النماذج المكتملة إلى مكتب البلدية خلال ساعات العمل.</p>
+        <h2 className="text-4xl font-bold text-center text-gray-800 mb-6">معاملات ونماذج</h2>
+        <p className="text-center text-gray-500 max-w-2xl mx-auto mb-12">هنا يمكنك العثور على جميع النماذج اللازمة للخدمات البلدية وتنزيلها. يرجى تقديم النماذج المكتملة إلى مكتب البلدية خلال ساعات .</p>
         <div className="bg-white p-8 rounded-xl shadow-xl">
             <ul className="divide-y divide-gray-200">
                 {documents.length > 0 ? documents.map(doc => (
@@ -249,6 +259,150 @@ const PermitsPage = ({ documents }) => (
         </div>
     </PageWrapper>
 );
+
+// --- NEW SECTION: DUE FEES PAGE ---
+const DueFeesPage = () => {
+    const [nameQuery, setNameQuery] = useState('');
+    const [propQuery, setPropQuery] = useState('');
+    const [results, setResults] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [message, setMessage] = useState('');
+
+    const handleSearch = async (e) => {
+        e.preventDefault();
+        if (!nameQuery && !propQuery) {
+            setMessage("الرجاء إدخال الاسم الثلاثي أو رقم العقار للبحث.");
+            setResults([]);
+            return;
+        }
+
+        setIsLoading(true);
+        setMessage('');
+        setResults([]);
+        
+        try {
+            const feesCollection = collection(db, "dueFees");
+            const queries = [];
+
+            // Query by name if provided
+            if (nameQuery.trim()) {
+                queries.push(getDocs(query(feesCollection, where("fullName", "==", nameQuery.trim()))));
+            }
+
+            // Query by property number if provided
+            if (propQuery.trim()) {
+                queries.push(getDocs(query(feesCollection, where("propertyNumber", "==", propQuery.trim()))));
+            }
+
+            // Await all queries
+            const snapshots = await Promise.all(queries);
+
+            // Use a Map to combine results and remove duplicates (by doc ID)
+            const resultsMap = new Map();
+            snapshots.forEach(snapshot => {
+                snapshot.docs.forEach(doc => {
+                    resultsMap.set(doc.id, { id: doc.id, ...doc.data() });
+                });
+            });
+
+            const combinedResults = Array.from(resultsMap.values());
+
+            if (combinedResults.length === 0) {
+                setMessage("لم يتم العثور على نتائج مطابقة لبحثك.");
+            }
+            
+            setResults(combinedResults);
+
+        } catch (error) {
+            console.error("Error searching due fees: ", error);
+            setMessage("حدث خطأ أثناء البحث. يرجى المحاولة مرة أخرى.");
+        }
+
+        setIsLoading(false);
+    };
+
+    return (
+        <PageWrapper>
+            <h2 className="text-4xl font-bold text-center text-gray-800 mb-6">الاستعلام عن الرسوم البلدية</h2>
+            <p className="text-center text-gray-500 max-w-2xl mx-auto mb-12">
+                للاستعلام عنالرسوم المتوجبة على القيمة التأجيرية،
+                الرجاء إدخال الاسم الثلاثي للمكلف أو رقم العقار.
+            </p>
+            
+            {/* Search Form */}
+            <div className="bg-white p-8 rounded-xl shadow-xl max-w-2xl mx-auto mb-12">
+                <form onSubmit={handleSearch} className="space-y-6">
+                    <div>
+                        <label htmlFor="fullName" className="block text-gray-700 font-semibold mb-2">الاسم الثلاثي للمكلف</label>
+                        <input 
+                            type="text" 
+                            id="fullName" 
+                            value={nameQuery}
+                            onChange={(e) => setNameQuery(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" 
+                            placeholder="مثال: جون فؤاد ضاهر"
+                        />
+                    </div>
+                    <div className="text-center text-gray-500 font-semibold">أو</div>
+                    <div>
+                        <label htmlFor="propertyNumber" className="block text-gray-700 font-semibold mb-2">رقم العقار</label>
+                        <input 
+                            type="text" 
+                            id="propertyNumber" 
+                            value={propQuery}
+                            onChange={(e) => setPropQuery(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" 
+                            placeholder="مثال: 1234"
+                        />
+                    </div>
+                    <button 
+                        type="submit" 
+                        disabled={isLoading} 
+                        className="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1 disabled:bg-emerald-300"
+                    >
+                        {isLoading ? 'جاري البحث...' : 'بحث'}
+                    </button>
+                </form>
+            </div>
+
+            {/* Results Section */}
+            {isLoading && <p className="text-center text-lg text-gray-600">جاري البحث...</p>}
+            
+            {message && <p className="text-center text-lg font-semibold text-red-600">{message}</p>}
+
+            {results.length > 0 && (
+                <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl overflow-x-auto">
+                    <h3 className="text-2xl font-bold text-emerald-700 mb-6">نتائج البحث</h3>
+                    <div className="min-w-full">
+                        <table className="w-full text-right">
+                            <thead className="border-b-2 border-gray-200">
+                                <tr>
+                                    <th className="py-3 px-4 text-gray-600 font-bold">الاسم الثلاثي</th>
+                                    <th className="py-3 px-4 text-gray-600 font-bold">رقم العقار</th>
+                                    <th className="py-3 px-4 text-gray-600 font-bold">الموقع (اختياري)</th>
+                                    <th className="py-3 px-4 text-gray-600 font-bold">الرسم المتوجب</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {results.map(item => (
+                                    <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                        <td className="py-4 px-4 text-gray-800">{item.fullName}</td>
+                                        <td className="py-4 px-4 text-gray-800">{item.propertyNumber}</td>
+                                        <td className="py-4 px-4 text-gray-600">{item.location || '-'}</td>
+                                        <td className="py-4 px-4 text-emerald-700 font-bold">
+                                            {/* Format as currency (optional but recommended) */}
+                                            {new Intl.NumberFormat('ar-LB', { style: 'currency', currency: 'LBP' }).format(item.dueFee || 0)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+        </PageWrapper>
+    );
+};
 
 const ContactPage = () => {
     const form = useRef();
@@ -311,14 +465,29 @@ const ContactPage = () => {
                 <div className="bg-white p-8 rounded-xl shadow-xl">
                     <h3 className="text-3xl font-bold text-emerald-700 mb-6">مكتب البلدية</h3>
                     <div className="space-y-6 text-gray-600 text-lg">
-                        <p className="flex items-start"><svg className="w-7 h-7 ml-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg><span>الساحة الرئيسية، رومين، محافظة النبطية، لبنان</span></p>
-                        <p className="flex items-center"><svg className="w-7 h-7 ml-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg><span>+961 X XXX XXX</span></p>
-                        <p className="flex items-center"><svg className="w-7 h-7 ml-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg><span>info@roumine.gov.lb</span></p>
+                        <p className="flex items-start"><svg className="w-7 h-7 ml-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg><span>مدخل القرية الجنوبي مقابل ثانوية رومين الرسمية ، رومين ، محافظة النبطية ، لبنان</span></p>
+                        <p className="flex items-center"><svg className="w-7 h-7 ml-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg><span>+961 81 059 364</span></p>
+                        <p className="flex items-center"><svg className="w-7 h-7 ml-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg><span>baladiyat.roumine@gmail.com</span></p>
                         <hr className="my-6 border-gray-200" />
                         <h4 className="font-semibold text-xl text-gray-800">ساعات العمل:</h4>
-                        <p>الاثنين - الجمعة: 8:00 صباحًا - 4:00 مساءً</p>
-                        <p>السبت: 8:00 صباحًا - 1:00 ظهرًا</p>
+                        <p>الاثنين - الجمعة: 8:00 صباحًا - 2:00 ظهراً</p>
+                        <p>السبت - الأحد: مغلق</p>
                     </div>
+                    <div className="mt-8">
+    <h4 className="font-semibold text-xl text-gray-800 mb-4">موقعنا على الخريطة:</h4>
+    <div className="rounded-lg overflow-hidden shadow-md">
+        <iframe
+            title="Roumine Municipality Location"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3319.4673680979667!2d35.43841808486987!3d33.722513980703816!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1516f882199b50e3%3A0xc3b8a3e7e81b6c7a!2sRoumine!5e0!3m2!1sen!2slb!4v1663152206673!5m2!1sen!2slb"
+            width="100%"
+            height="300"
+            style={{ border: 0 }}
+            allowFullScreen=""
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+        ></iframe>
+    </div>
+</div>
                 </div>
                 <div className="bg-white p-8 rounded-xl shadow-xl">
                     <h3 className="text-3xl font-bold text-emerald-700 mb-6">أرسل لنا رسالة</h3>
@@ -361,8 +530,17 @@ const ComplaintsAndSurveysPage = ({ surveys, addComplaint }) => {
 
     const handleComplaintSubmit = async (e) => {
         e.preventDefault();
+        
+        // Add validation for the 8-digit phone number
+        const phonePattern = /^\d{8}$/;
         if(!name || !contact || !subject || !message) {
             setStatus("يرجى ملء جميع الحقول.");
+            setIsError(true);
+            return;
+        }
+
+        if (!phonePattern.test(contact)) {
+            setStatus("الرجاء إدخال رقم هاتف صحيح مكون من 8 أرقام.");
             setIsError(true);
             return;
         }
@@ -386,57 +564,65 @@ const ComplaintsAndSurveysPage = ({ surveys, addComplaint }) => {
         <PageWrapper>
             <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">شكاوى واستمارات</h2>
 
-            {/* Surveys Section */}
-            <div className="mb-16">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                {/* Complaints Section */}
+                <div className="bg-white p-8 rounded-xl shadow-xl">
+                    <h3 className="text-3xl font-bold text-emerald-700 mb-6 border-b-2 border-emerald-200 pb-3">تقديم شكوى أو اقتراح</h3>
+                    <p className="text-center text-gray-500 max-w-2xl mx-auto mb-8">إذا كان لديكم أي شكوى، ملاحظة، أو اقتراح، يمكنكم تقديمه هنا مباشرةً وسيتم مراجعته من قبل الفريق المختص في البلدية.</p>
+                    <form onSubmit={handleComplaintSubmit} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-gray-700 font-semibold mb-2">الاسم الكامل</label>
+                                <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" required/>
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 font-semibold mb-2">رقم الهاتف</label>
+                                <input 
+                                    type="tel" 
+                                    value={contact} 
+                                    onChange={e => setContact(e.target.value)} 
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" 
+                                    pattern="\d{8}" 
+                                    maxLength="8"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 font-semibold mb-2">الموضوع</label>
+                            <input type="text" value={subject} onChange={e => setSubject(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" required/>
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 font-semibold mb-2">تفاصيل الشكوى/الاقتراح</label>
+                            <textarea value={message} onChange={e => setMessage(e.target.value)} rows="5" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" required></textarea>
+                        </div>
+                        <button type="submit" className="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-all duration-300 shadow-md">إرسال</button>
+                        {status && <p className={`text-center mt-4 ${isError ? 'text-red-500' : 'text-green-600'}`}>{status}</p>}
+                    </form>
+                </div>
+
+                {/* Surveys Section */}
+                <div className="mb-16">
                 <h3 className="text-3xl font-bold text-emerald-700 mb-6 border-b-2 border-emerald-200 pb-3">استمارات واستطلاعات رأي</h3>
                 <p className="text-center text-gray-500 max-w-2xl mx-auto mb-8">نقدر رأيكم ومشاركتكم في تحسين بلدتنا. يرجى المشاركة في الاستطلاعات المتاحة أدناه.</p>
-                 <div className="space-y-4">
+                 <div className="space-y-6">
                     {surveys.length > 0 ? surveys.map(survey => (
-                        <div key={survey.id} className="bg-white p-5 rounded-xl shadow-lg flex justify-between items-center transition-shadow hover:shadow-xl">
-                            <p className="font-semibold text-lg text-gray-800">{survey.title}</p>
-                            <a href={survey.link} target="_blank" rel="noopener noreferrer" className="bg-emerald-600 text-white font-bold py-2 px-6 rounded-full hover:bg-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1">
+                        <div key={survey.id} className="bg-gray-50 p-6 rounded-lg shadow-sm flex flex-col justify-between items-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                            <p className="font-bold text-lg text-gray-800 mb-2">{survey.title}</p>
+                            {survey.details && <p className="text-sm text-gray-600 mb-4 text-center">{survey.details}</p>}
+                            <a href={survey.link} target="_blank" rel="noopener noreferrer" className="bg-emerald-600 text-white font-bold py-2 px-6 rounded-full hover:bg-emerald-700 transition-all duration-300 shadow-md transform hover:scale-105">
                                 ابدأ الاستطلاع
                             </a>
                         </div>
                     )) : <p className="text-center text-gray-600 py-4">لا توجد استطلاعات متاحة حالياً.</p>}
                 </div>
             </div>
-
-            {/* Complaints Section */}
-            <div>
-                <h3 className="text-3xl font-bold text-emerald-700 mb-6 border-b-2 border-emerald-200 pb-3">تقديم شكوى أو اقتراح</h3>
-                <p className="text-center text-gray-500 max-w-2xl mx-auto mb-8">إذا كان لديكم أي شكوى، ملاحظة، أو اقتراح، يمكنكم تقديمه هنا مباشرةً وسيتم مراجعته من قبل الفريق المختص في البلدية.</p>
-                <div className="bg-white p-8 rounded-xl shadow-xl max-w-2xl mx-auto">
-                    <form onSubmit={handleComplaintSubmit} className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-gray-700 font-semibold mb-2">الاسم الكامل</label>
-                                <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" required/>
-                            </div>
-                            <div>
-                                <label className="block text-gray-700 font-semibold mb-2">معلومات الاتصال (هاتف أو بريد إلكتروني)</label>
-                                <input type="text" value={contact} onChange={e => setContact(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" required/>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 font-semibold mb-2">الموضوع</label>
-                            <input type="text" value={subject} onChange={e => setSubject(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" required/>
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 font-semibold mb-2">تفاصيل الشكوى/الاقتراح</label>
-                            <textarea value={message} onChange={e => setMessage(e.target.value)} rows="5" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" required></textarea>
-                        </div>
-                        <button type="submit" className="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-all duration-300 shadow-md">إرسال</button>
-                        {status && <p className={`text-center mt-4 ${isError ? 'text-red-500' : 'text-green-600'}`}>{status}</p>}
-                    </form>
-                </div>
             </div>
-
         </PageWrapper>
     );
 };
 
-const AdminPage = ({ user, handleLogin, handleLogout, news, documents, surveys, complaints, addNews, deleteNews, addDocument, deleteDocument, addSurvey, deleteSurvey }) => {
+const AdminPage = ({ user, handleLogin, handleLogout, news, documents, surveys, complaints, addNews, deleteNews, addDocument, deleteDocument, addSurvey, deleteSurvey, updateComplaintStatus, deleteComplaint,handleFeesUpload }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -451,7 +637,12 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, surveys, 
 
     const [surveyTitle, setSurveyTitle] = useState('');
     const [surveyLink, setSurveyLink] = useState('');
-
+     const [surveyDetails, setSurveyDetails] = useState(''); 
+const [feesFile, setFeesFile] = useState(null);
+    const [isUploadingFees, setIsUploadingFees] = useState(false);
+      const [filter, setFilter] = useState('all');
+      
+      
     const onLogin = (e) => {
         e.preventDefault();
         if(!email || !password) {
@@ -489,9 +680,38 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, surveys, 
     const onAddSurvey = (e) => {
         e.preventDefault();
         if (!surveyTitle || !surveyLink) return;
-        addSurvey({ title: surveyTitle, link: surveyLink });
+        addSurvey({ title: surveyTitle, link: surveyLink, details: surveyDetails }); // Updated call
         setSurveyTitle('');
         setSurveyLink('');
+        setSurveyDetails(''); // Reset new state
+    };
+
+     // Filter complaints based on the selected status
+    const filteredComplaints = complaints.filter(complaint => {
+        if (filter === 'all') return true;
+        return complaint.status === filter;
+    });
+
+const onUploadFees = (e) => {
+        e.preventDefault();
+        if (!feesFile) {
+            alert("يرجى اختيار ملف JSON.");
+            return;
+        }
+        setIsUploadingFees(true);
+        // This function needs to be implemented in the main App component
+        // It should handle reading the JSON file and batch-writing to Firestore
+        handleFeesUpload(feesFile)
+            .then(() => {
+                alert("تم تحديث جدول الرسوم بنجاح.");
+                setFeesFile(null);
+                e.target.reset();
+            })
+            .catch(err => {
+                console.error(err);
+                alert("فشل تحديث الرسوم. راجع الكونسول.");
+            })
+            .finally(() => setIsUploadingFees(false));
     };
 
     if (!user) {
@@ -550,7 +770,7 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, surveys, 
 
                         {/* Manage Documents */}
                         <div className="bg-white p-8 rounded-xl shadow-xl mb-12">
-                             <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة المعاملات والرخص</h3>
+                             <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة المعاملات والنماذج</h3>
                             <form onSubmit={onAddDocument} className="mb-6 space-y-4">
                                 <input type="text" placeholder="عنوان المستند" value={docTitle} onChange={e => setDocTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
                                 <input type="file" onChange={e => setDocFile(e.target.files[0])} accept=".pdf" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
@@ -567,40 +787,81 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, surveys, 
                                 ))}
                             </div>
                         </div>
-                         {/* Manage Surveys */}
-                        <div className="bg-white p-8 rounded-xl shadow-xl">
-                            <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة الاستمارات</h3>
-                            <form onSubmit={onAddSurvey} className="mb-6 space-y-4">
-                                <input type="text" placeholder="عنوان الاستمارة" value={surveyTitle} onChange={e => setSurveyTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
-                                <input type="url" placeholder="رابط Microsoft Forms" value={surveyLink} onChange={e => setSurveyLink(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
-                                <button type="submit" className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700">إضافة استمارة</button>
+
+                        <div className="bg-white p-8 rounded-xl shadow-xl mb-12">
+                             <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة الرسوم المتوجبة</h3>
+                             <p className="text-sm text-gray-600 mb-4">
+                                هام: يرجى تحويل ملف الإكسل إلى ملف <code className="bg-gray-200 p-1 rounded">.json</code> قبل الرفع.
+                                يجب أن يكون الملف بصيغة:
+                                <br />
+                                <code className="text-xs">
+                                    [{"{"}"fullName": "...", "propertyNumber": "...", "dueFee": 150000{"}"}, ...]
+                                </code>
+                             </p>
+                            <form onSubmit={onUploadFees} className="mb-6 space-y-4">
+                                <input type="file" onChange={e => setFeesFile(e.target.files[0])} accept=".json" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
+                                <button type="submit" disabled={isUploadingFees} className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700 disabled:bg-gray-400">
+                                    {isUploadingFees ? 'جاري التحديث...' : 'رفع وتحديث جدول الرسوم'}
+                                </button>
                             </form>
-                            <div className="space-y-4 max-h-60 overflow-y-auto">
-                                {surveys.map(survey => (
-                                    <div key={survey.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
-                                        <span className="font-semibold text-gray-700">{survey.title}</span>
-                                        <button onClick={() => deleteSurvey(survey.id)} className="text-red-500 hover:text-red-700 font-semibold">حذف</button>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
+                         {/* Manage Surveys */}
+                         <div className="bg-white p-8 rounded-xl shadow-xl">
+        <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة الاستمارات</h3>
+        <form onSubmit={onAddSurvey} className="mb-6 space-y-4">
+            <input type="text" placeholder="عنوان الاستمارة" value={surveyTitle} onChange={e => setSurveyTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+            <textarea placeholder="تفاصيل الاستمارة (اختياري)" value={surveyDetails} onChange={e => setSurveyDetails(e.target.value)} rows="3" className="w-full px-4 py-3 border border-gray-300 rounded-lg"></textarea>
+            <input type="url" placeholder="رابط Microsoft Forms" value={surveyLink} onChange={e => setSurveyLink(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+            <button type="submit" className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700">إضافة استمارة</button>
+        </form>
+        <div className="space-y-4 max-h-60 overflow-y-auto">
+            {surveys.map(survey => (
+                <div key={survey.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
+                    <span className="font-semibold text-gray-700">{survey.title}</span>
+                    <button onClick={() => deleteSurvey(survey.id)} className="text-red-500 hover:text-red-700 font-semibold">حذف</button>
+                </div>
+            ))}
+        </div>
+    </div>
                     </div>
-                    {/* View Complaints */}
-                    <div className="bg-white p-8 rounded-xl shadow-xl">
-                        <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">الشكاوى والاقتراحات الواردة</h3>
+                    
+                    <div>
+                        {/* View Complaints */}
+                        <div className="bg-white p-8 rounded-xl shadow-xl">
+                        <div className="flex justify-between items-center mb-6 border-b pb-4">
+                            <h3 className="text-2xl font-bold text-emerald-700">الشكاوى والاقتراحات الواردة</h3>
+                            <select value={filter} onChange={e => setFilter(e.target.value)} className="p-2 border rounded-md">
+                                <option value="all">الكل</option>
+                                <option value="pending">قيد المعالجة</option>
+                                <option value="resolved">تمت المعالجة</option>
+                            </select>
+                        </div>
                         <div className="space-y-4 max-h-[800px] overflow-y-auto">
-                             {complaints.length > 0 ? complaints.map(complaint => (
-                                <div key={complaint.id} className="p-4 bg-gray-50 rounded-lg border">
+                            {filteredComplaints.length > 0 ? filteredComplaints.map(complaint => (
+                                <div key={complaint.id} className="p-4 bg-white rounded-xl shadow-md border border-gray-200">
                                     <div className="flex justify-between items-center mb-2">
-                                        <h4 className="font-bold text-gray-800">{complaint.subject}</h4>
-                                        <span className="text-xs text-gray-500">{complaint.createdAt?.toDate().toLocaleDateString('ar-LB')}</span>
+                                        <h4 className="font-bold text-lg text-gray-800">{complaint.subject}</h4>
+                                        <span className={`text-sm font-semibold px-2 py-1 rounded-full ${complaint.status === 'resolved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                            {complaint.status === 'resolved' ? 'تمت المعالجة' : 'قيد المعالجة'}
+                                        </span>
                                     </div>
                                     <p className="text-sm text-gray-600 mb-1"><strong>من:</strong> {complaint.name}</p>
                                     <p className="text-sm text-gray-600 mb-3"><strong>للتواصل:</strong> {complaint.contact}</p>
                                     <p className="text-gray-700 whitespace-pre-wrap">{complaint.message}</p>
+                                    <div className="mt-4 flex justify-end space-x-2">
+                                        {complaint.status !== 'resolved' && (
+                                            <button onClick={() => updateComplaintStatus(complaint.id, 'resolved')} className="bg-emerald-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors shadow-md">
+                                                وضع علامة "تمت المعالجة"
+                                            </button>
+                                        )}
+                                        <button onClick={() => deleteComplaint(complaint.id)} className="bg-red-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-md">
+                                            حذف
+                                        </button>
+                                    </div>
                                 </div>
                             )) : <p className="text-center text-gray-500">لا توجد شكاوى حالياً.</p>}
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -710,7 +971,7 @@ export default function App() {
         setDocuments(prev => prev.filter(doc => doc.id !== id));
     };
 
-    const addSurvey = async (survey) => {
+const addSurvey = async (survey) => {
         const newSurvey = { ...survey, createdAt: new Date() };
         const docRef = await addDoc(collection(db, "surveys"), newSurvey);
         setSurveys(prev => [{ id: docRef.id, ...newSurvey }, ...prev]);
@@ -722,11 +983,84 @@ export default function App() {
     };
 
     const addComplaint = async (complaint) => {
-        const newComplaint = { ...complaint, createdAt: serverTimestamp() };
+        const newComplaint = { ...complaint, createdAt: serverTimestamp(),status: 'pending' };
         await addDoc(collection(db, "complaints"), newComplaint);
         // We don't need to update local state for the user, but we'll refetch for admin
         const complaintsSnapshot = await getDocs(query(collection(db, "complaints"), orderBy("createdAt", "desc")));
         setComplaints(complaintsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    };
+
+    const updateComplaintStatus = async (id, newStatus) => {
+        const complaintRef = doc(db, "complaints", id);
+        await updateDoc(complaintRef, { status: newStatus });
+        setComplaints(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+    };
+
+    const deleteComplaint = async (id) => {
+        await deleteDoc(doc(db, "complaints", id));
+        setComplaints(prev => prev.filter(c => c.id !== id));
+    };
+
+// --- NEW: Function to handle uploading the fees JSON ---
+    const handleFeesUpload = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const jsonData = JSON.parse(event.target.result);
+                    if (!Array.isArray(jsonData)) {
+                        throw new Error("JSON file must be an array.");
+                    }
+
+                    // This function will upload all items. 
+                    // For monthly updates, you should ideally clear the old collection first
+                    // or use a unique ID (like propertyNumber) to 'set' (overwrite) docs.
+                    // For simplicity, this example uses batch 'add'.
+                    
+                    // A more robust solution would be to 'set' with propertyNumber as the doc ID.
+                    // Example: doc(db, "dueFees", item.propertyNumber)
+                    
+                    const batch = writeBatch(db);
+                    const feesCollection = collection(db, "dueFees");
+
+                    // To be safe, let's delete all existing documents first.
+                    // THIS IS DESTRUCTIVE AND REPLACES ALL DATA.
+                    console.log("Deleting old fees data...");
+                    const oldDocsSnapshot = await getDocs(feesCollection);
+                    oldDocsSnapshot.forEach(doc => {
+                        batch.delete(doc.ref);
+                    });
+                    
+                    console.log("Adding new fees data...");
+                    jsonData.forEach(item => {
+                        // Ensure data is clean
+                        const newFeeEntry = {
+                            fullName: String(item.fullName || ''),
+                            propertyNumber: String(item.propertyNumber || ''),
+                            location: String(item.location || ''),
+                            dueFee: Number(item.dueFee || 0),
+                            updatedAt: serverTimestamp()
+                        };
+                        
+                        // Use propertyNumber as the document ID to prevent duplicates
+                        // and allow for easy overwrites.
+                        const docRef = doc(db, "dueFees", newFeeEntry.propertyNumber);
+                        batch.set(docRef, newFeeEntry);
+                    });
+
+                    // Commit the batch
+                    await batch.commit();
+                    console.log("Batch commit successful.");
+                    resolve();
+
+                } catch (err) {
+                    console.error("Error parsing JSON or uploading to Firestore: ", err);
+                    reject(err);
+                }
+            };
+            reader.onerror = (err) => reject(err);
+            reader.readAsText(file);
+        });
     };
 
 
@@ -741,6 +1075,7 @@ export default function App() {
             case 'about': return <AboutPage />;
             case 'news': return <NewsPage news={news} />;
             case 'permits': return <PermitsPage documents={documents} />;
+            case 'fees': return <DueFeesPage />;
             case 'contact': return <ContactPage />;
             case 'surveys': return <ComplaintsAndSurveysPage surveys={surveys} addComplaint={addComplaint} />;
             case 'admin': return <AdminPage 
@@ -757,6 +1092,9 @@ export default function App() {
                                     deleteDocument={deleteDocument}
                                     addSurvey={addSurvey}
                                     deleteSurvey={deleteSurvey}
+                                    updateComplaintStatus={updateComplaintStatus}
+                                    deleteComplaint={deleteComplaint}
+                                    handleFeesUpload={handleFeesUpload}
                                 />;
             case 'home':
             default:
