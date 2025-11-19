@@ -562,26 +562,49 @@ const ComplaintsAndSurveysPage = ({ surveys, addComplaint }) => {
 
     return (
         <PageWrapper>
-            <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">شكاوى واستمارات</h2>
+            <div className="text-center mb-12">
+                <h2 className="text-4xl font-bold text-gray-800 mb-4">شكاوى واستمارات</h2>
+                <p className="text-gray-500 max-w-2xl mx-auto text-lg">
+                    منصتكم للتواصل المباشر. شاركونا آراءكم أو قدموا شكاوى، وساهموا في اتخاذ القرار عبر الاستبيانات.
+                </p>
+            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                {/* Complaints Section */}
-                <div className="bg-white p-8 rounded-xl shadow-xl">
-                    <h3 className="text-3xl font-bold text-emerald-700 mb-6 border-b-2 border-emerald-200 pb-3">تقديم شكوى أو اقتراح</h3>
-                    <p className="text-center text-gray-500 max-w-2xl mx-auto mb-8">إذا كان لديكم أي شكوى، ملاحظة، أو اقتراح، يمكنكم تقديمه هنا مباشرةً وسيتم مراجعته من قبل الفريق المختص في البلدية.</p>
-                    <form onSubmit={handleComplaintSubmit} className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                {/* Complaints Section - Right Column */}
+                <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+                    <div className="flex items-center mb-6 border-b border-gray-100 pb-4">
+                        <div className="bg-red-100 p-3 rounded-full ml-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div>
+                             <h3 className="text-2xl font-bold text-gray-800">تقديم شكوى أو اقتراح</h3>
+                             <p className="text-sm text-gray-500">سيتم التعامل مع رسالتك بسرية تامة</p>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleComplaintSubmit} className="space-y-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
-                                <label className="block text-gray-700 font-semibold mb-2">الاسم الكامل</label>
-                                <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" required/>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">الاسم الكامل</label>
+                                <input 
+                                    type="text" 
+                                    value={name} 
+                                    onChange={e => setName(e.target.value)} 
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors" 
+                                    placeholder="الاسم الثلاثي"
+                                    required
+                                />
                             </div>
                             <div>
-                                <label className="block text-gray-700 font-semibold mb-2">رقم الهاتف</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">رقم الهاتف</label>
                                 <input 
                                     type="tel" 
                                     value={contact} 
                                     onChange={e => setContact(e.target.value)} 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" 
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors" 
+                                    placeholder="xxxxxxxx"
                                     pattern="\d{8}" 
                                     maxLength="8"
                                     required
@@ -589,34 +612,87 @@ const ComplaintsAndSurveysPage = ({ surveys, addComplaint }) => {
                             </div>
                         </div>
                         <div>
-                            <label className="block text-gray-700 font-semibold mb-2">الموضوع</label>
-                            <input type="text" value={subject} onChange={e => setSubject(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" required/>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">الموضوع</label>
+                            <input 
+                                type="text" 
+                                value={subject} 
+                                onChange={e => setSubject(e.target.value)} 
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors" 
+                                placeholder="اختصار لموضوع الشكوى"
+                                required
+                            />
                         </div>
                         <div>
-                            <label className="block text-gray-700 font-semibold mb-2">تفاصيل الشكوى/الاقتراح</label>
-                            <textarea value={message} onChange={e => setMessage(e.target.value)} rows="5" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" required></textarea>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">التفاصيل</label>
+                            <textarea 
+                                value={message} 
+                                onChange={e => setMessage(e.target.value)} 
+                                rows="5" 
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors resize-none" 
+                                placeholder="اشرح لنا المشكلة أو الاقتراح بالتفصيل..."
+                                required
+                            ></textarea>
                         </div>
-                        <button type="submit" className="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-all duration-300 shadow-md">إرسال</button>
-                        {status && <p className={`text-center mt-4 ${isError ? 'text-red-500' : 'text-green-600'}`}>{status}</p>}
+                        <button 
+                            type="submit" 
+                            className="w-full bg-emerald-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-emerald-700 hover:shadow-lg transition-all duration-300 transform active:scale-95 flex justify-center items-center gap-2"
+                        >
+                            <span>إرسال</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                        </button>
+                        {status && (
+                            <div className={`p-4 rounded-lg text-center font-semibold ${isError ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                                {status}
+                            </div>
+                        )}
                     </form>
                 </div>
 
-                {/* Surveys Section */}
-                <div className="mb-16">
-                <h3 className="text-3xl font-bold text-emerald-700 mb-6 border-b-2 border-emerald-200 pb-3">استمارات واستطلاعات رأي</h3>
-                <p className="text-center text-gray-500 max-w-2xl mx-auto mb-8">نقدر رأيكم ومشاركتكم في تحسين بلدتنا. يرجى المشاركة في الاستطلاعات المتاحة أدناه.</p>
-                 <div className="space-y-6">
-                    {surveys.length > 0 ? surveys.map(survey => (
-                        <div key={survey.id} className="bg-gray-50 p-6 rounded-lg shadow-sm flex flex-col justify-between items-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                            <p className="font-bold text-lg text-gray-800 mb-2">{survey.title}</p>
-                            {survey.details && <p className="text-sm text-gray-600 mb-4 text-center">{survey.details}</p>}
-                            <a href={survey.link} target="_blank" rel="noopener noreferrer" className="bg-emerald-600 text-white font-bold py-2 px-6 rounded-full hover:bg-emerald-700 transition-all duration-300 shadow-md transform hover:scale-105">
-                                ابدأ الاستطلاع
-                            </a>
+                {/* Surveys Section - Left Column */}
+                <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 h-full">
+                    <div className="flex items-center mb-6 border-b border-gray-100 pb-4">
+                        <div className="bg-blue-100 p-3 rounded-full ml-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                            </svg>
                         </div>
-                    )) : <p className="text-center text-gray-600 py-4">لا توجد استطلاعات متاحة حالياً.</p>}
+                        <div>
+                            <h3 className="text-2xl font-bold text-gray-800">استمارات واستطلاعات</h3>
+                            <p className="text-sm text-gray-500">رأيكم يساهم في تطوير بلدتنا</p>
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                        {surveys.length > 0 ? surveys.map(survey => (
+                            <div key={survey.id} className="group bg-white border border-gray-200 p-6 rounded-xl hover:border-emerald-500 hover:shadow-md transition-all duration-300">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                    <div>
+                                        <h4 className="font-bold text-lg text-gray-800 group-hover:text-emerald-700 transition-colors">{survey.title}</h4>
+                                        {survey.details && <p className="text-sm text-gray-500 mt-1">{survey.details}</p>}
+                                    </div>
+                                    <a 
+                                        href={survey.link} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="w-full sm:w-auto text-center bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold py-2 px-6 rounded-full hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all duration-300 text-sm whitespace-nowrap"
+                                    >
+                                        المشاركة الآن
+                                    </a>
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <p className="text-gray-500 font-medium">لا توجد استطلاعات نشطة حالياً</p>
+                                <p className="text-sm text-gray-400 mt-1">يرجى التحقق لاحقاً</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
             </div>
         </PageWrapper>
     );
