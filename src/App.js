@@ -30,6 +30,7 @@ const Header = ({ navigate, currentPage }) => {
         { id: 'permits', text: 'معاملات ونماذج' },
         { id: 'fees', text: 'الرسوم البلدية' }, // --- NEW PAGE LINK ---
         { id: 'surveys', text: 'شكاوى واستمارات' },
+        { id: 'faqs', text: 'الأسئلة الشائعة' },
         { id: 'contact', text: 'تواصل معنا' },
         { id: 'admin', text: 'Admin' },
     ];
@@ -85,6 +86,126 @@ const Footer = () => (
     </footer>
 );
 
+// --- HELPER: ANIMATED NUMBER COMPONENT ---
+const AnimatedNumber = ({ end, duration = 2000, suffix = "", decimals = 0 }) => {
+    const [count, setCount] = useState(0);
+    const countRef = useRef(null);
+    const [hasStarted, setHasStarted] = useState(false);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting && !hasStarted) {
+                    setHasStarted(true);
+                    observer.disconnect(); // Trigger only once
+                }
+            },
+            { threshold: 0.5 } // Trigger when 50% visible
+        );
+
+        if (countRef.current) {
+            observer.observe(countRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [hasStarted]);
+
+    useEffect(() => {
+        if (!hasStarted) return;
+
+        let startTime;
+        let animationFrame;
+
+        const step = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            
+            // Ease-out effect (starts fast, slows down at end)
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+            
+            setCount(easeProgress * end);
+
+            if (progress < 1) {
+                animationFrame = requestAnimationFrame(step);
+            }
+        };
+
+        animationFrame = requestAnimationFrame(step);
+
+        return () => cancelAnimationFrame(animationFrame);
+    }, [hasStarted, end, duration]);
+
+    // Format number (e.g., adds commas like 4,500)
+    const formattedNumber = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+    }).format(count);
+
+    return (
+        <span ref={countRef} className="tabular-nums">
+            {formattedNumber}{suffix}
+        </span>
+    );
+};
+
+// --- UPDATED QUICK STATS COMPONENT ---
+const QuickStats = () => {
+    const stats = [
+        { 
+            id: 1, 
+            label: "المساحة الإجمالية", 
+            number: 4.5, 
+            suffix: " كلم²",
+            decimals: 1,
+            icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7m0 0L9 7" /></svg>
+        },
+        { 
+            id: 2, 
+            label: "عدد السكان", 
+            number: 4500, 
+            suffix: " نسمة", 
+            decimals: 0,
+            icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+        },
+        { 
+            id: 3, 
+            label: "الوحدات السكنية", 
+            number: 850, 
+            suffix: " وحدة",
+            decimals: 0, 
+            icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+        },
+        { 
+            id: 4, 
+            label: "المؤسسات التجارية", 
+            number: 45, 
+            suffix: " مؤسسة",
+            decimals: 0, 
+            icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+        },
+    ];
+
+    return (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16 container mx-auto px-4">
+            {stats.map((stat) => (
+                <div key={stat.id} className="bg-white p-6 rounded-xl shadow-lg border-b-4 border-emerald-500 text-center transform transition duration-300 hover:-translate-y-1 hover:shadow-xl group">
+                    <div className="text-emerald-600 flex justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                        {stat.icon}
+                    </div>
+                    <h4 className="text-3xl font-bold text-gray-800 mb-1">
+                        <AnimatedNumber 
+                            end={stat.number} 
+                            suffix={stat.suffix} 
+                            decimals={stat.decimals} 
+                        />
+                    </h4>
+                    <p className="text-gray-500 font-medium">{stat.label}</p>
+                </div>
+            ))}
+        </div>
+    );
+};
+
 const HomePage = ({ navigate }) => (
     <PageWrapper>
         <div className="relative rounded-xl overflow-hidden h-[500px] mb-16 shadow-2xl">
@@ -94,8 +215,10 @@ const HomePage = ({ navigate }) => (
                 <p className="text-lg md:text-xl max-w-2xl">بلدة التاريخ العريق، والمجتمع النابض بالحياة، والطبيعة الهادئة في قلب جنوب لبنان.</p>
             </div>
         </div>
+        <QuickStats />
         <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">خدمات البلدية</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            
             <ServiceCard 
               icon="news" 
               title="آخر الأخبار" 
@@ -121,6 +244,12 @@ const HomePage = ({ navigate }) => (
               description="شارك برأيك وقدم ملاحظاتك لتحسين بلدتنا."
               onClick={() => navigate('surveys')} 
             />
+            {/* <ServiceCard 
+              icon="faqs" 
+              title="الأسئلة الشائعة" 
+              description="احصل على إجابات لأكثر الأسئلة شيوعاً حول خدمات البلدية." 
+              onClick={() => navigate('contact')} 
+            /> */}
             {/* --- MOVED CONTACT TO END FOR BETTER GRID FILL --- */}
             {/* <ServiceCard 
               icon="contact" 
@@ -128,6 +257,8 @@ const HomePage = ({ navigate }) => (
               description="تواصل مع المكتب البلدي للاستفسارات والدعم." 
               onClick={() => navigate('contact')} 
             /> */}
+
+    
         </div>
     </PageWrapper>
 );
@@ -698,6 +829,87 @@ const ComplaintsAndSurveysPage = ({ surveys, addComplaint }) => {
     );
 };
 
+const FAQPage = () => {
+    // FAQs inspired by the municipality context and your website's features
+    const faqs = [
+
+        {
+            question: "ما هو مفهوم القيمة التأجيريّة للعقار؟",
+            answer: "القيمة التأجيريّة هي مقدار الإيجار السنويّ للبناء القائم على عقار ما، أو على قسم من عقار، ويجري تحديد هذه القيمة وفقاًَ «للأسعار الرائجة» أي وفقاً لما هو متعارف عليه بين المؤجّرين والمستأجرين في منطقة سكنيّة أو غير سكنيّة (صناعيّة، تجاريّة، سياحيّة، شتويّة، صيفيّة إلخ.) خلال مدّة زمنيّة بحيث تقل أو تزيد قيمة الإيجارات في فترات لاحقة، وتؤخذ هذه القيمة عادةً لفرض الرسم البلدي وفقا لعقود الإيجار الجاريّة، أو وفقا للافادة الصادرة عن دوائر وزارة الماليّة المختصة، وتعرف «بالقيمة التأجيريّة»."
+        },
+        {
+            question: "",
+            answer: ""
+        },
+        {
+            question: "ما هي مهام المفرزة الصحية في البلدية؟",
+            answer: "تعتبر المفرزة الصحية جهازاً رقابياً أساسياً يهتم بصحة السكان وسلامة الغذاء. تشمل مهامها: إجراء فحوصات دورية لمياه الشرب، مراقبة المؤسسات الغذائية (مطاعم، ملاحم، أفران) للتأكد من مطابقتها للمواصفات الصحية، ومنح الشهادات الصحية للعاملين في هذا القطاع."
+        },
+        {
+            question: "ما هو دور الشرطة البلدية؟",
+            answer: "الشرطة البلدية هي الضابطة التي تسهر على الراحة والسلامة العامة. تتولى مهام تنظيم السير، قمع مخالفات البناء والتعديات على الأملاك العامة والأرصفة، ومساعدة المواطنين في حالات الطوارئ، بالإضافة إلى تنفيذ القرارات الصادرة عن المجلس البلدي."
+        },
+        {
+            question: "كيف يمكنني تقديم شكوى أو مقترح للبلدية؟",
+            answer: "يمكنكم تقديم شكوى مباشرة عبر هذا الموقع من خلال صفحة 'شكاوى واستمارات'. يتم التعامل مع جميع الرسائل بسرية تامة ومتابعتها من قبل القسم المختص. كما يمكنكم زيارة القصر البلدي خلال أوقات الدوام الرسمي."
+        },
+        {
+            question: "كيف يمكنني الاستعلام عن الرسوم البلدية المتوجبة؟",
+            answer: "وفرنا لكم خدمة إلكترونية جديدة عبر صفحة 'الرسوم البلدية' في هذا الموقع. يكفي إدخال رقم العقار أو الاسم الثلاثي للمكلف لمعرفة القيمة التأجيرية والرسوم المتوجبة."
+        },
+        {
+            question: "ما هي المستندات المطلوبة لإنجاز المعاملات؟",
+            answer: "يمكنكم الاطلاع على النماذج الرسمية ولائحة المستندات المطلوبة لمختلف المعاملات (تصاريح، إفادات، رخص) عبر زيارة صفحة 'معاملات ونماذج' وتحميل الملفات بصيغة PDF."
+        },
+        {
+            question: "كيف يتم التعامل مع النفايات والردميات؟",
+            answer: "تقوم البلدية بجمع النفايات المنزلية بشكل دوري. أما بالنسبة للردميات ومخلفات البناء، يمنع رميها في المستوعبات العادية أو الأماكن العامة، ويجب التنسيق مع البلدية لتحديد كيفية التخلص منها بشكل قانوني."
+        }
+    ];
+
+    const [openIndex, setOpenIndex] = useState(null);
+
+    const toggleFAQ = (index) => {
+        setOpenIndex(openIndex === index ? null : index);
+    };
+
+    return (
+        <PageWrapper>
+            <h2 className="text-4xl font-bold text-center text-gray-800 mb-6">الأسئلة الشائعة</h2>
+            <p className="text-center text-gray-500 max-w-2xl mx-auto mb-12">
+                إجابات على أكثر الاستفسارات شيوعاً حول خدمات البلدية والإجراءات الإدارية.
+            </p>
+            <div className="max-w-3xl mx-auto space-y-4">
+                {faqs.map((faq, index) => (
+                    <div 
+                        key={index} 
+                        className={`bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 border border-gray-100 ${openIndex === index ? 'ring-2 ring-emerald-500 shadow-lg' : 'hover:shadow-lg'}`}
+                    >
+                        <button 
+                            onClick={() => toggleFAQ(index)} 
+                            className="w-full px-6 py-5 text-right flex justify-between items-center focus:outline-none"
+                        >
+                            <span className={`text-lg font-bold ${openIndex === index ? 'text-emerald-700' : 'text-gray-700'}`}>
+                                {faq.question}
+                            </span>
+                            <span className={`transform transition-transform duration-300 text-emerald-500 ${openIndex === index ? 'rotate-180' : ''}`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </span>
+                        </button>
+                        <div 
+                            className={`px-6 text-gray-600 leading-relaxed bg-emerald-50/50 transition-all duration-300 ease-in-out ${openIndex === index ? 'max-h-96 py-5 opacity-100' : 'max-h-0 py-0 opacity-0'}`}
+                        >
+                            {faq.answer}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </PageWrapper>
+    );
+};
+
 const AdminPage = ({ user, handleLogin, handleLogout, news, documents, surveys, complaints, addNews, deleteNews, addDocument, deleteDocument, addSurvey, deleteSurvey, updateComplaintStatus, deleteComplaint,handleFeesUpload }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -1154,6 +1366,7 @@ const addSurvey = async (survey) => {
         switch (currentPage) {
             case 'about': return <AboutPage />;
             case 'news': return <NewsPage news={news} />;
+            case 'faqs': return <FAQPage />;
             case 'permits': return <PermitsPage documents={documents} />;
             case 'fees': return <DueFeesPage />;
             case 'contact': return <ContactPage />;
