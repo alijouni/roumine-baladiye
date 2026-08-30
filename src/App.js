@@ -397,15 +397,15 @@ const PermitsPage = ({ documents }) => (
 // --- NEW SECTION: DUE FEES PAGE ---
 const DueFeesPage = () => {
     const [nameQuery, setNameQuery] = useState('');
-    const [propQuery, setPropQuery] = useState('');
+    const [phoneQuery, setPhoneQuery] = useState('');
     const [results, setResults] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState('');
 
     const handleSearch = async (e) => {
         e.preventDefault();
-        if (!nameQuery && !propQuery) {
-            setMessage("الرجاء إدخال الاسم الثلاثي أو رقم العقار للبحث.");
+        if (!nameQuery.trim() && !phoneQuery.trim()) {
+            setMessage("الرجاء إدخال الاسم الثلاثي أو رقم الهاتف للبحث.");
             setResults([]);
             return;
         }
@@ -418,20 +418,19 @@ const DueFeesPage = () => {
             const feesCollection = collection(db, "dueFees");
             const queries = [];
 
-            // Query by name if provided
+            // Query by Full Name if provided
             if (nameQuery.trim()) {
                 queries.push(getDocs(query(feesCollection, where("fullName", "==", nameQuery.trim()))));
             }
 
-            // Query by property number if provided
-            if (propQuery.trim()) {
-                queries.push(getDocs(query(feesCollection, where("propertyNumber", "==", propQuery.trim()))));
+            // Query by Phone Number if provided
+            if (phoneQuery.trim()) {
+                queries.push(getDocs(query(feesCollection, where("phone", "==", phoneQuery.trim()))));
             }
 
-            // Await all queries
             const snapshots = await Promise.all(queries);
 
-            // Use a Map to combine results and remove duplicates (by doc ID)
+            // Combine results and remove duplicates
             const resultsMap = new Map();
             snapshots.forEach(snapshot => {
                 snapshot.docs.forEach(doc => {
@@ -459,8 +458,7 @@ const DueFeesPage = () => {
         <PageWrapper>
             <h2 className="text-4xl font-bold text-center text-gray-800 mb-6">الاستعلام عن الرسوم البلدية</h2>
             <p className="text-center text-gray-500 max-w-2xl mx-auto mb-12">
-                للاستعلام عنالرسوم المتوجبة على القيمة التأجيرية،
-                الرجاء إدخال الاسم الثلاثي للمكلف أو رقم العقار.
+                للاستعلام عن الرسوم المتوجبة، الرجاء إدخال الاسم الثلاثي للمكلف أو رقم الهاتف المسجل.
             </p>
             
             {/* Search Form */}
@@ -474,19 +472,19 @@ const DueFeesPage = () => {
                             value={nameQuery}
                             onChange={(e) => setNameQuery(e.target.value)}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" 
-                            placeholder="مثال: جون فؤاد ضاهر"
+                            placeholder="مثال: علي حسن شكرون"
                         />
                     </div>
                     <div className="text-center text-gray-500 font-semibold">أو</div>
                     <div>
-                        <label htmlFor="propertyNumber" className="block text-gray-700 font-semibold mb-2">رقم العقار</label>
+                        <label htmlFor="phone" className="block text-gray-700 font-semibold mb-2">رقم الهاتف</label>
                         <input 
                             type="text" 
-                            id="propertyNumber" 
-                            value={propQuery}
-                            onChange={(e) => setPropQuery(e.target.value)}
+                            id="phone" 
+                            value={phoneQuery}
+                            onChange={(e) => setPhoneQuery(e.target.value)}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow" 
-                            placeholder="مثال: 1234"
+                            placeholder="مثال: 70011222"
                         />
                     </div>
                     <button 
@@ -509,23 +507,28 @@ const DueFeesPage = () => {
                     <h3 className="text-2xl font-bold text-emerald-700 mb-6">نتائج البحث</h3>
                     <div className="min-w-full">
                         <table className="w-full text-right">
-                            <thead className="border-b-2 border-gray-200">
+                            <thead className="border-b-2 border-gray-200 bg-gray-50">
                                 <tr>
                                     <th className="py-3 px-4 text-gray-600 font-bold">الاسم الثلاثي</th>
-                                    <th className="py-3 px-4 text-gray-600 font-bold">رقم العقار</th>
-                                    <th className="py-3 px-4 text-gray-600 font-bold">الموقع (اختياري)</th>
-                                    <th className="py-3 px-4 text-gray-600 font-bold">الرسم المتوجب</th>
+                                    <th className="py-3 px-4 text-gray-600 font-bold">رقم الهاتف</th>
+                                    <th className="py-3 px-4 text-gray-600 font-bold">المسقفات</th>
+                                    <th className="py-3 px-4 text-gray-600 font-bold">كلفة النفايات</th>
+                                    <th className="py-3 px-4 text-gray-800 font-bold text-lg">المجموع المتوجب</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {results.map(item => (
-                                    <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-                                        <td className="py-4 px-4 text-gray-800">{item.fullName}</td>
-                                        <td className="py-4 px-4 text-gray-800">{item.propertyNumber}</td>
-                                        <td className="py-4 px-4 text-gray-600">{item.location || '-'}</td>
-                                        <td className="py-4 px-4 text-emerald-700 font-bold">
-                                            {/* Format as currency (optional but recommended) */}
-                                            {new Intl.NumberFormat('ar-LB', { style: 'currency', currency: 'LBP' }).format(item.dueFee || 0)}
+                                    <tr key={item.id} className="border-b border-gray-100 hover:bg-emerald-50 transition-colors">
+                                        <td className="py-4 px-4 text-gray-800 font-medium">{item.fullName}</td>
+                                        <td className="py-4 px-4 text-gray-600" dir="ltr">{item.phone || '-'}</td>
+                                        <td className="py-4 px-4 text-gray-700">
+                                            {new Intl.NumberFormat('ar-LB').format(item.mosakafatFee || 0)} ل.ل.
+                                        </td>
+                                        <td className="py-4 px-4 text-gray-700">
+                                            {new Intl.NumberFormat('ar-LB').format(item.wasteFee || 0)} ل.ل.
+                                        </td>
+                                        <td className="py-4 px-4 text-emerald-700 font-bold text-lg bg-emerald-50/30">
+                                            {new Intl.NumberFormat('ar-LB').format(item.dueFee || 0)} ل.ل.
                                         </td>
                                     </tr>
                                 ))}
