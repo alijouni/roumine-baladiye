@@ -155,7 +155,7 @@ const QuickStats = () => {
         { 
             id: 1, 
             label: "المساحة الإجمالية", 
-            number: 4.5, 
+            number: 5.4, 
             suffix: " كلم²",
             decimals: 1,
             icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7m0 0L9 7" /></svg>
@@ -180,7 +180,7 @@ const QuickStats = () => {
             id: 4, 
             label: "المؤسسات التجارية", 
             number: 45, 
-            suffix: " مؤسسة",
+            suffix: " محل",
             decimals: 0, 
             icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
         },
@@ -294,9 +294,9 @@ const AboutPage = () => (
       
       {/* Images Column - now on the left for md and larger, stacked on mobile */}
       <div className="md:col-span-2 flex flex-col items-center space-y-6 order-first md:order-first"> {/* order-first ensures it's first on mobile too */}
-        <img src={historicalRoumine} alt="رومين قديماً" className="w-full h-auto rounded-lg shadow-md" />
-        <img src={roumineRoad} alt="رومين في منتصف القرن" className="w-full h-auto rounded-lg shadow-md" />
-        <img src={modernRoumine} alt="بلدتنا اليوم" className="w-full h-auto rounded-lg shadow-md" />
+        <img src={historicalRoumine} alt="رومين قديماً" className="w-full h-auto rounded-lg shadow-md" loading="lazy" />
+        <img src={roumineRoad} alt="رومين في منتصف القرن" className="w-full h-auto rounded-lg shadow-md" loading="lazy" />
+        <img src={modernRoumine} alt="بلدتنا اليوم" className="w-full h-auto rounded-lg shadow-md" loading="lazy" />
       </div>
 
       {/* Text Column - now on the right for md and larger */}
@@ -351,27 +351,180 @@ const AboutPage = () => (
         </PageWrapper>
 );
 
-const NewsPage = ({ news }) => (
-    <PageWrapper>
-        <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">أخبار وبيانات رسمية</h2>
-        <div className="space-y-8">
-            {news.length > 0 ? news.map(item => (
-                <div key={item.id} className="bg-white rounded-xl shadow-lg overflow-hidden transition-shadow hover:shadow-2xl flex flex-col md:flex-row md:items-center">
-                    {/* --- Image Section (Modified) --- */}
-                    <div className="w-full md:w-1/4">
-                        <img src={item.imageUrl} alt={item.title} className="object-cover w-full" />
+const NewsPage = ({ news }) => {
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [zoomLevel, setZoomLevel] = useState(1);
+
+    const openPreview = (imageUrl, title) => {
+        setSelectedImage({ url: imageUrl, title });
+        setZoomLevel(1);
+    };
+
+    const closePreview = () => {
+        setSelectedImage(null);
+        setZoomLevel(1);
+    };
+
+    const handleZoomIn = () => {
+        setZoomLevel((prev) => Math.min(prev + 0.5, 3));
+    };
+
+    const handleZoomOut = () => {
+        setZoomLevel((prev) => Math.max(prev - 0.5, 1));
+    };
+
+    const handleDownload = async (imageUrl, title) => {
+        try {
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = `${title || 'news-image'}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Download error:', error);
+            window.open(imageUrl, '_blank');
+        }
+    };
+
+    return (
+        <PageWrapper>
+            <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">أخبار وبيانات رسمية</h2>
+            
+            <div className="space-y-8">
+                {news.length > 0 ? (
+                    news.map((item) => (
+                        <div key={item.id} className="bg-white rounded-xl shadow-lg overflow-hidden transition-shadow hover:shadow-2xl flex flex-col md:flex-row md:items-stretch">
+                            {/* --- Uncropped Full Image Card Container --- */}
+                            <div 
+                                className="w-full md:w-1/3 p-3 bg-gray-50 relative group cursor-pointer overflow-hidden flex items-center justify-center border-b md:border-b-0 md:border-l border-gray-100"
+                                onClick={() => openPreview(item.imageUrl, item.title)}
+                            >
+                                <img 
+                                    src={item.imageUrl} 
+                                    alt={item.title} 
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="object-contain max-h-96 w-full h-auto group-hover:scale-105 transition-transform duration-300 rounded-md" 
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center text-white font-semibold gap-2 rounded-md">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    <span>تكبير المعاينة</span>
+                                </div>
+                            </div>
+
+                            {/* --- Text Content Section --- */}
+                            <div className="w-full md:w-2/3 p-6 md:p-8 flex flex-col justify-center">
+                                <p className="text-sm text-gray-500 mb-2">{item.date}</p>
+                                <h3 className="text-2xl font-bold text-emerald-800 mb-3">{item.title}</h3>
+                                <p className="text-gray-600 leading-relaxed">{item.content}</p>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-center text-gray-600 text-lg">لا توجد أخبار حالياً.</p>
+                )}
+            </div>
+
+            {/* --- FULLSCREEN LIGHTBOX MODAL --- */}
+            {selectedImage && (
+                <div 
+                    className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col justify-between items-center p-2 md:p-4 animate-fadeIn"
+                    onClick={closePreview}
+                >
+                    {/* Top Action Bar */}
+                    <div 
+                        className="w-full max-w-6xl flex justify-between items-center text-white z-10 py-2 px-2"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h4 className="text-lg font-semibold truncate max-w-xs md:max-w-xl">
+                            {selectedImage.title}
+                        </h4>
+                        
+                        <button 
+                            onClick={closePreview}
+                            className="bg-white/20 hover:bg-white/30 text-white rounded-full p-2 transition-colors"
+                            title="إغلاق"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
                     </div>
-                    {/* --- Text Section (Modified) --- */}
-                    <div className="w-full md:w-3/4 p-6 md:p-8">
-                        <p className="text-sm text-gray-500 mb-2">{item.date}</p>
-                        <h3 className="text-2xl font-bold text-emerald-800 mb-3">{item.title}</h3>
-                        <p className="text-gray-600 leading-relaxed">{item.content}</p>
+
+                    {/* Image Display Container */}
+                    <div 
+                        className="flex-1 w-full max-w-6xl flex items-center justify-center overflow-auto p-1 md:p-2"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div 
+                            className="transition-transform duration-200 ease-out flex items-center justify-center w-full h-full"
+                            style={{ transform: `scale(${zoomLevel})` }}
+                        >
+                            <img 
+                                src={selectedImage.url} 
+                                alt={selectedImage.title} 
+                                className="max-h-[83vh] w-full object-contain rounded-lg shadow-2xl"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Bottom Control Bar */}
+                    <div 
+                        className="bg-gray-800/90 backdrop-blur-md text-white px-6 py-3 rounded-full flex items-center gap-6 shadow-xl z-10 my-2"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button 
+                            onClick={handleZoomOut} 
+                            disabled={zoomLevel <= 1}
+                            className="hover:text-emerald-400 disabled:opacity-40 transition-colors p-1"
+                            title="تصغير"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+                            </svg>
+                        </button>
+
+                        <span className="text-sm font-mono font-bold w-12 text-center select-none">
+                            {Math.round(zoomLevel * 100)}%
+                        </span>
+
+                        <button 
+                            onClick={handleZoomIn} 
+                            disabled={zoomLevel >= 3}
+                            className="hover:text-emerald-400 disabled:opacity-40 transition-colors p-1"
+                            title="تكبير"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                            </svg>
+                        </button>
+
+                        <div className="h-4 w-px bg-gray-600"></div>
+
+                        <button 
+                            onClick={() => handleDownload(selectedImage.url, selectedImage.title)}
+                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-full text-sm font-bold transition-all shadow-md active:scale-95"
+                            title="تنزيل الصورة"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>تحميل</span>
+                        </button>
                     </div>
                 </div>
-            )) : <p className="text-center text-gray-600 text-lg">لا توجد أخبار حالياً.</p>}
-        </div>
-    </PageWrapper>
-);
+            )}
+        </PageWrapper>
+    );
+};
 
 const PermitsPage = ({ documents }) => (
     <PageWrapper>
@@ -547,53 +700,54 @@ const ContactPage = () => {
     const [isError, setIsError] = useState(false);
     const [isSending, setIsSending] = useState(false);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setIsSending(true);
-        setStatusMessage("");
-        setIsError(false);
+const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSending(true);
+    setStatusMessage("");
+    setIsError(false);
 
-        const formData = new FormData(form.current);
-        const name = formData.get('name');
-        const email = formData.get('email');
-        const message = formData.get('message');
-        
-        if (!name || !email || !message) {
-            setStatusMessage("يرجى ملء جميع الحقول.");
-            setIsError(true);
-            setIsSending(false);
-            return;
+    const formData = new FormData(form.current);
+    const name = formData.get('name');
+    const email = formData.get('email');
+    const message = formData.get('message');
+    
+    if (!name || !email || !message) {
+        setStatusMessage("يرجى ملء جميع الحقول.");
+        setIsError(true);
+        setIsSending(false);
+        return;
+    }
+
+    try {
+        // 1. Always save to Firestore first so no citizen messages are lost
+        await addDoc(collection(db, "messages"), {
+            name: name,
+            email: email,
+            message: message,
+            createdAt: serverTimestamp()
+        });
+
+        // 2. Attempt EmailJS notification silently in background
+        if (process.env.REACT_APP_EMAILJS_SERVICE_ID) {
+            await emailjs.sendForm(
+                process.env.REACT_APP_EMAILJS_SERVICE_ID,
+                process.env.REACT_APP_EMAILJS_TEMPLATE_ID,
+                form.current,
+                process.env.REACT_APP_EMAILJS_PUBLIC_KEY
+            ).catch(err => console.warn("EmailJS failed, but message was saved to database:", err));
         }
 
-        emailjs.sendForm(
-            process.env.REACT_APP_EMAILJS_SERVICE_ID,
-            process.env.REACT_APP_EMAILJS_TEMPLATE_ID,
-            form.current,
-            process.env.REACT_APP_EMAILJS_PUBLIC_KEY
-        )
-        .then(() => {
-            console.log('Email successfully sent!');
-            return addDoc(collection(db, "messages"), {
-                name: name,
-                email: email,
-                message: message,
-                createdAt: serverTimestamp()
-            });
-        })
-        .then(() => {
-            console.log('Message saved to Firestore!');
-            setStatusMessage("تم إرسال رسالتك بنجاح!");
-            setIsError(false);
-            setIsSending(false);
-            form.current.reset();
-        })
-        .catch((err) => {
-            console.error('Failed to send message:', err);
-            setStatusMessage("فشل إرسال الرسالة. الرجاء المحاولة مرة أخرى.");
-            setIsError(true);
-            setIsSending(false);
-        });
-    };
+        setStatusMessage("تم إرسال رسالتك بنجاح!");
+        setIsError(false);
+        form.current.reset();
+    } catch (err) {
+        console.error('Failed to submit message:', err);
+        setStatusMessage("فشل إرسال الرسالة. الرجاء المحاولة مرة أخرى.");
+        setIsError(true);
+    } finally {
+        setIsSending(false);
+    }
+};
 
     return (
         <PageWrapper>
@@ -665,37 +819,55 @@ const ComplaintsAndSurveysPage = ({ surveys, addComplaint }) => {
     const [status, setStatus] = useState('');
     const [isError, setIsError] = useState(false);
 
-    const handleComplaintSubmit = async (e) => {
-        e.preventDefault();
-        
-        // Add validation for the 8-digit phone number
-        const phonePattern = /^\d{8}$/;
-        if(!name || !contact || !subject || !message) {
-            setStatus("يرجى ملء جميع الحقول.");
-            setIsError(true);
-            return;
+ const handleComplaintSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate 8-digit phone number
+    const phonePattern = /^\d{8}$/;
+    if (!name || !contact || !subject || !message) {
+        setStatus("يرجى ملء جميع الحقول.");
+        setIsError(true);
+        return;
+    }
+
+    if (!phonePattern.test(contact)) {
+        setStatus("الرجاء إدخال رقم هاتف صحيح مكون من 8 أرقام.");
+        setIsError(true);
+        return;
+    }
+    
+    try {
+        // 1. Save complaint to Firebase Firestore
+        await addComplaint({ name, contact, subject, message });
+
+        // 2. Send instant email notification to baladiyat.roumine@gmail.com
+        if (process.env.REACT_APP_EMAILJS_SERVICE_ID) {
+            await emailjs.send(
+                process.env.REACT_APP_EMAILJS_SERVICE_ID,
+                process.env.REACT_APP_EMAILJS_COMPLAINT_TEMPLATE_ID,
+                {
+                    name: name,
+                    contact: contact,
+                    subject: subject,
+                    message: message,
+                    to_email: 'baladiyat.roumine@gmail.com',
+                },
+                process.env.REACT_APP_EMAILJS_PUBLIC_KEY
+            ).catch(err => console.warn("Email notification failed, but complaint was saved to database:", err));
         }
 
-        if (!phonePattern.test(contact)) {
-            setStatus("الرجاء إدخال رقم هاتف صحيح مكون من 8 أرقام.");
-            setIsError(true);
-            return;
-        }
-        
-        try {
-            await addComplaint({ name, contact, subject, message });
-            setStatus("تم إرسال الشكوى بنجاح. شكراً لمساهمتكم.");
-            setIsError(false);
-            setName('');
-            setContact('');
-            setSubject('');
-            setMessage('');
-        } catch (error) {
-            console.error("Error submitting complaint: ", error);
-            setStatus("حدث خطأ أثناء إرسال الشكوى. يرجى المحاولة مرة أخرى.");
-            setIsError(true);
-        }
-    };
+        setStatus("تم إرسال الشكوى بنجاح. شكراً لمساهمتكم.");
+        setIsError(false);
+        setName('');
+        setContact('');
+        setSubject('');
+        setMessage('');
+    } catch (error) {
+        console.error("Error submitting complaint: ", error);
+        setStatus("حدث خطأ أثناء إرسال الشكوى. يرجى المحاولة مرة أخرى.");
+        setIsError(true);
+    }
+};
 
     return (
         <PageWrapper>
@@ -931,7 +1103,9 @@ const FAQPage = () => {
     );
 };
 
-const AdminPage = ({ user, handleLogin, handleLogout, news, documents, surveys, complaints, addNews, deleteNews, addDocument, deleteDocument, addSurvey, deleteSurvey, updateComplaintStatus, deleteComplaint,handleFeesUpload }) => {
+const AdminPage = ({ user, handleLogin, handleLogout, news, documents, surveys, complaints, addNews, deleteNews,updateNews, addDocument, deleteDocument, addSurvey, deleteSurvey, updateComplaintStatus, deleteComplaint,handleFeesUpload, optimizeAllExistingNews }) => {
+    
+    
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -947,9 +1121,14 @@ const AdminPage = ({ user, handleLogin, handleLogout, news, documents, surveys, 
     const [surveyTitle, setSurveyTitle] = useState('');
     const [surveyLink, setSurveyLink] = useState('');
      const [surveyDetails, setSurveyDetails] = useState(''); 
-const [feesFile, setFeesFile] = useState(null);
+    const [feesFile, setFeesFile] = useState(null);
     const [isUploadingFees, setIsUploadingFees] = useState(false);
       const [filter, setFilter] = useState('all');
+      const [editingNews, setEditingNews] = useState(null); // Holds the news object being edited
+    const [editTitle, setEditTitle] = useState('');
+    const [editContent, setEditContent] = useState('');
+    const [editImageFile, setEditImageFile] = useState(null);
+    const [isUpdatingNews, setIsUpdatingNews] = useState(false);
       
       
     const onLogin = (e) => {
@@ -974,6 +1153,41 @@ const [feesFile, setFeesFile] = useState(null);
         setNewsImage(null);
         e.target.reset();
     };
+
+    // Open edit modal and populate fields
+    const startEditing = (item) => {
+        setEditingNews(item);
+        setEditTitle(item.title);
+        setEditContent(item.content);
+        setEditImageFile(null);
+    };
+
+    // Save news updates
+    const handleSaveEdit = async (e) => {
+        e.preventDefault();
+        if (!editTitle || !editContent) {
+            alert("يرجى ملء جميع الحقول المطلوب تعديلها.");
+            return;
+        }
+
+        setIsUpdatingNews(true);
+        try {
+            await updateNews(editingNews.id, {
+                title: editTitle,
+                content: editContent,
+                newImageFile: editImageFile,
+                oldImageUrl: editingNews.imageUrl
+            });
+            setEditingNews(null);
+            alert("تم تعديل الخبر بنجاح!");
+        } catch (error) {
+            console.error("Error updating news:", error);
+            alert("حدث خطأ أثناء تعديل الخبر.");
+        } finally {
+            setIsUpdatingNews(false);
+        }
+    };
+
 
     const onAddDocument = (e) => {
         e.preventDefault();
@@ -1023,6 +1237,25 @@ const onUploadFees = (e) => {
             .finally(() => setIsUploadingFees(false));
     };
 
+    // 2. Add state for tracking optimization progress
+    const [optStatus, setOptStatus] = useState('');
+    const [isOptimizing, setIsOptimizing] = useState(false);
+
+    const handleRunOptimization = async () => {
+        if (!window.confirm("هل تريد تحسين وضغط جميع صور الأخبار الحالية لسرعة التحميل؟")) return;
+        
+        setIsOptimizing(true);
+        setOptStatus("جاري بدء الضغط...");
+        
+        await optimizeAllExistingNews((progressMsg) => {
+            setOptStatus(progressMsg);
+        });
+
+        setIsOptimizing(false);
+        setOptStatus("تم ضغط وتحسين جميع الصور بنجاح! 🚀");
+        setTimeout(() => setOptStatus(''), 5000);
+    };
+
     if (!user) {
         return (
             <PageWrapper>
@@ -1045,98 +1278,153 @@ const onUploadFees = (e) => {
         );
     }
 
-    return (
-        <PageWrapper>
-            <div className="container mx-auto">
-                <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-4xl font-bold text-gray-800">لوحة تحكم المسؤول</h2>
-                    <button onClick={handleLogout} className="bg-red-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-red-700 transition-colors shadow-md">تسجيل الخروج</button>
-                </div>
+ return (
+    <PageWrapper>
+        <div className="container mx-auto">
+            <div className="flex justify-between items-center mb-8">
+                <h2 className="text-4xl font-bold text-gray-800">لوحة تحكم المسؤول</h2>
+                <button onClick={handleLogout} className="bg-red-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-red-700 transition-colors shadow-md">تسجيل الخروج</button>
+            </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                    <div>
-                        {/* Manage News */}
-                        <div className="bg-white p-8 rounded-xl shadow-xl mb-12">
-                            <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة الأخبار</h3>
-                            <form onSubmit={onAddNews} className="mb-6 space-y-4">
-                                <input type="text" placeholder="عنوان الخبر" value={newsTitle} onChange={e => setNewsTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
-                                <textarea placeholder="محتوى الخبر" value={newsContent} onChange={e => setNewsContent(e.target.value)} rows="4" className="w-full px-4 py-3 border border-gray-300 rounded-lg"></textarea>
-                                <div>
-                                    <label className="block text-gray-700 font-semibold mb-2">صورة الخبر</label>
-                                    <input type="file" onChange={e => setNewsImage(e.target.files[0])} accept="image/*" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
-                                </div>
-                                <button type="submit" className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700">إضافة خبر</button>
-                            </form>
-                            <div className="space-y-4 max-h-60 overflow-y-auto">
-                                {news.map(item => (
-                                    <div key={item.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
-                                        <span className="font-semibold text-gray-700">{item.title}</span>
-                                        <button onClick={() => deleteNews(item.id)} className="text-red-500 hover:text-red-700 font-semibold">حذف</button>
-                                    </div>
-                                ))}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div>
+                    {/* Manage News */}
+                    <div className="bg-white p-8 rounded-xl shadow-xl mb-12">
+                        <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة الأخبار</h3>
+                        
+                        {/* Batch Compression Banner */}
+                        <div className="bg-emerald-50 p-4 rounded-lg mb-6 border border-emerald-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <div>
+                                <h4 className="font-bold text-emerald-800">تسريع تحميل صور الأخبار</h4>
+                                <p className="text-xs text-gray-600 mt-1">
+                                    ضغط جميع الصور المرفوعة سابقاً وتحويلها إلى صيغة WebP الخفيفة.
+                                </p>
                             </div>
+                            <button 
+                                onClick={handleRunOptimization} 
+                                disabled={isOptimizing || news.length === 0}
+                                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2 px-4 rounded-lg text-sm transition-all disabled:bg-gray-400 whitespace-nowrap shadow"
+                            >
+                                {isOptimizing ? 'جاري التحسين...' : '⚡ تحسين وتحويل كافة الصور'}
+                            </button>
                         </div>
 
-                        {/* Manage Documents */}
-                        <div className="bg-white p-8 rounded-xl shadow-xl mb-12">
-                             <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة المعاملات والنماذج</h3>
-                            <form onSubmit={onAddDocument} className="mb-6 space-y-4">
-                                <input type="text" placeholder="عنوان المستند" value={docTitle} onChange={e => setDocTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
-                                <input type="file" onChange={e => setDocFile(e.target.files[0])} accept=".pdf" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
-                                <button type="submit" disabled={isUploading} className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700 disabled:bg-gray-400">
-                                    {isUploading ? 'جاري الرفع...' : 'إضافة مستند'}
-                                </button>
-                            </form>
-                             <div className="space-y-4 max-h-60 overflow-y-auto">
-                                {documents.map(doc => (
-                                    <div key={doc.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
-                                        <span className="font-semibold text-gray-700">{doc.title}</span>
-                                        <button onClick={() => deleteDocument(doc.id, doc.filePath)} className="text-red-500 hover:text-red-700 font-semibold">حذف</button>
-                                    </div>
-                                ))}
+                        {optStatus && (
+                            <p className="text-center font-bold text-sm text-emerald-700 mb-4 bg-emerald-100 p-2 rounded animate-pulse">
+                                {optStatus}
+                            </p>
+                        )}
+
+                        <form onSubmit={onAddNews} className="mb-6 space-y-4">
+                            <input type="text" placeholder="عنوان الخبر" value={newsTitle} onChange={e => setNewsTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                            <textarea placeholder="محتوى الخبر" value={newsContent} onChange={e => setNewsContent(e.target.value)} rows="4" className="w-full px-4 py-3 border border-gray-300 rounded-lg"></textarea>
+                            <div>
+                                <label className="block text-gray-700 font-semibold mb-2">صورة الخبر</label>
+                                <input type="file" onChange={e => setNewsImage(e.target.files[0])} accept="image/*" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
                             </div>
-                        </div>
+                            <button type="submit" className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700">إضافة خبر</button>
+                        </form>
 
-                        <div className="bg-white p-8 rounded-xl shadow-xl mb-12">
-                             <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة الرسوم المتوجبة</h3>
-                             <p className="text-sm text-gray-600 mb-4">
-                                هام: يرجى تحويل ملف الإكسل إلى ملف <code className="bg-gray-200 p-1 rounded">.json</code> قبل الرفع.
-                                يجب أن يكون الملف بصيغة:
-                                <br />
-                                <code className="text-xs">
-                                    [{"{"}"fullName": "...", "propertyNumber": "...", "dueFee": 150000{"}"}, ...]
-                                </code>
-                             </p>
-                            <form onSubmit={onUploadFees} className="mb-6 space-y-4">
-                                <input type="file" onChange={e => setFeesFile(e.target.files[0])} accept=".json" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
-                                <button type="submit" disabled={isUploadingFees} className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700 disabled:bg-gray-400">
-                                    {isUploadingFees ? 'جاري التحديث...' : 'رفع وتحديث جدول الرسوم'}
-                                </button>
-                            </form>
-                        </div>
-                         {/* Manage Surveys */}
-                         <div className="bg-white p-8 rounded-xl shadow-xl">
-        <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة الاستمارات</h3>
-        <form onSubmit={onAddSurvey} className="mb-6 space-y-4">
-            <input type="text" placeholder="عنوان الاستمارة" value={surveyTitle} onChange={e => setSurveyTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
-            <textarea placeholder="تفاصيل الاستمارة (اختياري)" value={surveyDetails} onChange={e => setSurveyDetails(e.target.value)} rows="3" className="w-full px-4 py-3 border border-gray-300 rounded-lg"></textarea>
-            <input type="url" placeholder="رابط Microsoft Forms" value={surveyLink} onChange={e => setSurveyLink(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
-            <button type="submit" className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700">إضافة استمارة</button>
-        </form>
-        <div className="space-y-4 max-h-60 overflow-y-auto">
-            {surveys.map(survey => (
-                <div key={survey.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
-                    <span className="font-semibold text-gray-700">{survey.title}</span>
-                    <button onClick={() => deleteSurvey(survey.id)} className="text-red-500 hover:text-red-700 font-semibold">حذف</button>
-                </div>
-            ))}
+                        <div className="space-y-4 max-h-60 overflow-y-auto">
+    {news.map(item => (
+        <div key={item.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border gap-4">
+            {/* Title takes remaining space and wraps cleanly */}
+            <span className="font-semibold text-gray-700 flex-1 leading-relaxed">
+                {item.title}
+            </span>
+            
+            {/* Action buttons strictly locked side-by-side in one row */}
+            <div className="flex items-center gap-3 shrink-0 whitespace-nowrap">
+                <button 
+                    onClick={() => startEditing(item)} 
+                    className="text-emerald-600 hover:text-emerald-800 font-semibold transition-colors"
+                >
+                    تعديل
+                </button>
+                <button 
+                    onClick={() => deleteNews(item.id)} 
+                    className="text-red-500 hover:text-red-700 font-semibold transition-colors"
+                >
+                    حذف
+                </button>
+            </div>
         </div>
-    </div>
+    ))}
+</div>
                     </div>
-                    
-                    <div>
-                        {/* View Complaints */}
-                        <div className="bg-white p-8 rounded-xl shadow-xl">
+
+                    {/* Manage Documents */}
+                    <div className="bg-white p-8 rounded-xl shadow-xl mb-12">
+                         <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة المعاملات والنماذج</h3>
+                        <form onSubmit={onAddDocument} className="mb-6 space-y-4">
+                            <input type="text" placeholder="عنوان المستند" value={docTitle} onChange={e => setDocTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                            <input type="file" onChange={e => setDocFile(e.target.files[0])} accept=".pdf" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
+                            <button type="submit" disabled={isUploading} className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700 disabled:bg-gray-400">
+                                {isUploading ? 'جاري الرفع...' : 'إضافة مستند'}
+                            </button>
+                        </form>
+<div className="space-y-4 max-h-60 overflow-y-auto">
+    {documents.map(doc => (
+        <div key={doc.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border gap-4">
+            {/* Title occupies all available horizontal space and wraps naturally */}
+            <span className="font-semibold text-gray-700 flex-1 leading-relaxed">
+                {doc.title}
+            </span>
+            
+            {/* Delete button remains fixed on the left with no wrapping */}
+            <button 
+                onClick={() => deleteDocument(doc.id, doc.filePath)} 
+                className="text-red-500 hover:text-red-700 font-semibold shrink-0 whitespace-nowrap transition-colors"
+            >
+                حذف
+            </button>
+        </div>
+    ))}
+</div>
+                    </div>
+
+                    {/* Manage Due Fees */}
+                    <div className="bg-white p-8 rounded-xl shadow-xl mb-12">
+                         <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة الرسوم المتوجبة</h3>
+                         <p className="text-sm text-gray-600 mb-4">
+                            هام: يرجى تحويل ملف الإكسل إلى ملف <code className="bg-gray-200 p-1 rounded">.json</code> قبل الرفع.
+                            يجب أن يكون الملف بصيغة:
+                            <br />
+                            <code className="text-xs">
+                                [{"{"}"fullName": "...", "propertyNumber": "...", "dueFee": 150000{"}"}, ...]
+                            </code>
+                         </p>
+                        <form onSubmit={onUploadFees} className="mb-6 space-y-4">
+                            <input type="file" onChange={e => setFeesFile(e.target.files[0])} accept=".json" className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
+                            <button type="submit" disabled={isUploadingFees} className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700 disabled:bg-gray-400">
+                                {isUploadingFees ? 'جاري التحديث...' : 'رفع وتحديث جدول الرسوم'}
+                            </button>
+                        </form>
+                    </div>
+
+                     {/* Manage Surveys */}
+                     <div className="bg-white p-8 rounded-xl shadow-xl">
+                        <h3 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-4">إدارة الاستمارات</h3>
+                        <form onSubmit={onAddSurvey} className="mb-6 space-y-4">
+                            <input type="text" placeholder="عنوان الاستمارة" value={surveyTitle} onChange={e => setSurveyTitle(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                            <textarea placeholder="تفاصيل الاستمارة (اختياري)" value={surveyDetails} onChange={e => setSurveyDetails(e.target.value)} rows="3" className="w-full px-4 py-3 border border-gray-300 rounded-lg"></textarea>
+                            <input type="url" placeholder="رابط Microsoft or Google Forms" value={surveyLink} onChange={e => setSurveyLink(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                            <button type="submit" className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700">إضافة استمارة</button>
+                        </form>
+                        <div className="space-y-4 max-h-60 overflow-y-auto">
+                            {surveys.map(survey => (
+                                <div key={survey.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
+                                    <span className="font-semibold text-gray-700">{survey.title}</span>
+                                    <button onClick={() => deleteSurvey(survey.id)} className="text-red-500 hover:text-red-700 font-semibold">حذف</button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    {/* View Complaints */}
+                    <div className="bg-white p-8 rounded-xl shadow-xl">
                         <div className="flex justify-between items-center mb-6 border-b pb-4">
                             <h3 className="text-2xl font-bold text-emerald-700">الشكاوى والاقتراحات الواردة</h3>
                             <select value={filter} onChange={e => setFilter(e.target.value)} className="p-2 border rounded-md">
@@ -1171,11 +1459,69 @@ const onUploadFees = (e) => {
                             )) : <p className="text-center text-gray-500">لا توجد شكاوى حالياً.</p>}
                         </div>
                     </div>
-                    </div>
                 </div>
             </div>
-        </PageWrapper>
-    );
+        </div>
+
+        {/* EDIT NEWS MODAL */}
+        {editingNews && (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg animate-fadeIn text-right">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">تعديل الخبر</h3>
+                    <form onSubmit={handleSaveEdit} className="space-y-4">
+                        <div>
+                            <label className="block text-gray-700 font-semibold mb-1">عنوان الخبر</label>
+                            <input 
+                                type="text" 
+                                value={editTitle} 
+                                onChange={e => setEditTitle(e.target.value)} 
+                                className="w-full px-4 py-2 border rounded-lg" 
+                                required 
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 font-semibold mb-1">محتوى الخبر</label>
+                            <textarea 
+                                value={editContent} 
+                                onChange={e => setEditContent(e.target.value)} 
+                                rows="4" 
+                                className="w-full px-4 py-2 border rounded-lg" 
+                                required 
+                            ></textarea>
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 font-semibold mb-1">تغيير الصورة (اختياري)</label>
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={e => setEditImageFile(e.target.files[0])} 
+                                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" 
+                            />
+                            <p className="text-xs text-gray-400 mt-1">اترك هذا الحقل فارغاً إذا كنت لا تريد تغيير الصورة الحالية.</p>
+                        </div>
+                        
+                        <div className="flex justify-end gap-3 pt-4 border-t">
+                            <button 
+                                type="button" 
+                                onClick={() => setEditingNews(null)} 
+                                className="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300"
+                            >
+                                إلغاء
+                            </button>
+                            <button 
+                                type="submit" 
+                                disabled={isUpdatingNews} 
+                                className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-emerald-700 disabled:bg-gray-400"
+                            >
+                                {isUpdatingNews ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
+    </PageWrapper>
+);
 };
 
 const EmergencyDirectoryPage = () => {
@@ -1251,6 +1597,48 @@ const EmergencyDirectoryPage = () => {
         </PageWrapper>
     );
 };
+
+// Helper to compress File objects or image URLs into WebP blobs
+const compressToWebP = (imageSource, maxWidth = 1200, quality = 0.75) => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous'; // Required for Firebase cross-origin images
+        
+        const srcUrl = typeof imageSource === 'string' 
+            ? imageSource 
+            : URL.createObjectURL(imageSource);
+
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob((blob) => {
+                if (typeof imageSource !== 'string') URL.revokeObjectURL(srcUrl);
+                if (blob) resolve(blob);
+                else reject(new Error('Compression failed'));
+            }, 'image/webp', quality);
+        };
+
+        img.onerror = (err) => {
+            if (typeof imageSource !== 'string') URL.revokeObjectURL(srcUrl);
+            reject(err);
+        };
+
+        img.src = srcUrl;
+    });
+};
 // --- MAIN APP COMPONENT ---
 
 export default function App() {
@@ -1309,18 +1697,66 @@ export default function App() {
     const handleLogin = (email, password) => signInWithEmailAndPassword(auth, email, password);
     const handleLogout = () => signOut(auth);
 
-    const addNews = async (newsItem) => {
-        const { title, content, date, imageFile } = newsItem;
-        const imageRef = ref(storage, `news-images/${Date.now()}_${imageFile.name}`);
-        
-        await uploadBytes(imageRef, imageFile);
-        const imageUrl = await getDownloadURL(imageRef);
+// Updated addNews: automatically compresses new uploads to WebP
+const addNews = async (newsItem) => {
+    const { title, content, date, imageFile } = newsItem;
+    
+    // 1. Compress image to WebP
+    const compressedBlob = await compressToWebP(imageFile, 1200, 0.75);
+    
+    // 2. Upload WebP to Firebase Storage
+    const imageRef = ref(storage, `news-images/opt_${Date.now()}.webp`);
+    await uploadBytes(imageRef, compressedBlob, { contentType: 'image/webp' });
+    const imageUrl = await getDownloadURL(imageRef);
 
-        const newNews = { title, content, date, imageUrl, createdAt: new Date() };
-        const docRef = await addDoc(collection(db, "news"), newNews);
+    // 3. Save record to Firestore
+    const newNews = { title, content, date, imageUrl, createdAt: new Date() };
+    const docRef = await addDoc(collection(db, "news"), newNews);
 
-        setNews(prev => [{ id: docRef.id, ...newNews }, ...prev]);
-    };
+    setNews(prev => [{ id: docRef.id, ...newNews }, ...prev]);
+};
+
+// New function: Batch compress all existing news images
+const optimizeAllExistingNews = async (onProgress) => {
+    let count = 0;
+    const total = news.length;
+
+    for (const item of news) {
+        count++;
+        if (onProgress) onProgress(`جاري ضغط الصورة (${count} من ${total}): ${item.title}`);
+
+        try {
+            // Skip if image is already optimized
+            if (item.imageUrl && item.imageUrl.includes('opt_') && item.imageUrl.includes('.webp')) {
+                continue;
+            }
+
+            // 1. Fetch and compress image
+            const compressedBlob = await compressToWebP(item.imageUrl, 1200, 0.75);
+
+            // 2. Upload new WebP file
+            const newStorageRef = ref(storage, `news-images/opt_${Date.now()}_${item.id}.webp`);
+            await uploadBytes(newStorageRef, compressedBlob, { contentType: 'image/webp' });
+            const newImageUrl = await getDownloadURL(newStorageRef);
+
+            // 3. Update Firestore document
+            const docRef = doc(db, "news", item.id);
+            await updateDoc(docRef, { imageUrl: newImageUrl });
+
+            // 4. Delete old bulky image from Storage
+            if (item.imageUrl) {
+                const oldStorageRef = ref(storage, item.imageUrl);
+                await deleteObject(oldStorageRef).catch(() => {});
+            }
+        } catch (error) {
+            console.error(`Error optimizing ${item.title}:`, error);
+        }
+    }
+
+    // Refresh news state from Firestore
+    const newsSnapshot = await getDocs(query(collection(db, "news"), orderBy("createdAt", "desc")));
+    setNews(newsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+};
     
     const deleteNews = async (id) => {
         const newsToDelete = news.find(item => item.id === id);
@@ -1331,6 +1767,33 @@ export default function App() {
         await deleteDoc(doc(db, "news", id));
         setNews(prev => prev.filter(item => item.id !== id));
     };
+
+
+        const updateNews = async (id, { title, content, newImageFile, oldImageUrl }) => {
+    let imageUrl = oldImageUrl;
+
+    // If a new image is selected, compress and upload it to Firebase Storage
+    if (newImageFile) {
+        const compressedBlob = await compressToWebP(newImageFile, 1200, 0.75);
+        const imageRef = ref(storage, `news-images/opt_${Date.now()}.webp`);
+        await uploadBytes(imageRef, compressedBlob, { contentType: 'image/webp' });
+        imageUrl = await getDownloadURL(imageRef);
+
+        // Delete the previous image from Storage to save space
+        if (oldImageUrl) {
+            const oldStorageRef = ref(storage, oldImageUrl);
+            await deleteObject(oldStorageRef).catch(() => {});
+        }
+    }
+
+    // Update document in Firestore
+    const newsRef = doc(db, "news", id);
+    const updatedFields = { title, content, imageUrl };
+    await updateDoc(newsRef, updatedFields);
+
+    // Update local React state
+    setNews(prev => prev.map(item => item.id === id ? { ...item, ...updatedFields } : item));
+};
     
     const addDocument = async ({ title, file }) => {
         const filePath = `documents/${Date.now()}_${file.name}`;
@@ -1475,6 +1938,7 @@ const addSurvey = async (survey) => {
                                     complaints={complaints}
                                     addNews={addNews}
                                     deleteNews={deleteNews}
+                                    updateNews={updateNews}
                                     addDocument={addDocument}
                                     deleteDocument={deleteDocument}
                                     addSurvey={addSurvey}
@@ -1482,6 +1946,7 @@ const addSurvey = async (survey) => {
                                     updateComplaintStatus={updateComplaintStatus}
                                     deleteComplaint={deleteComplaint}
                                     handleFeesUpload={handleFeesUpload}
+                                    optimizeAllExistingNews={optimizeAllExistingNews}
                                 />;
             case 'home':
             default:
