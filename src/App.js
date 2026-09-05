@@ -1048,7 +1048,7 @@ const FAQPage = () => {
         },
         {
             question: "كيف يمكنني الاستعلام عن الرسوم البلدية المتوجبة؟",
-            answer: "وفرنا لكم خدمة إلكترونية جديدة عبر صفحة 'الرسوم البلدية' في هذا الموقع. يكفي إدخال رقم العقار أو الاسم الثلاثي للمكلف لمعرفة القيمة التأجيرية والرسوم المتوجبة."
+            answer: "وفرنا لكم خدمة إلكترونية جديدة عبر صفحة 'الرسوم البلدية' في هذا الموقع. يكفي إدخال الاسم الثلاثي للمكلف أو رقم الهاتف لمعرفة القيمة التأجيرية والرسوم المتوجبة."
         },
         {
             question: "ما هي المستندات المطلوبة لإنجاز المعاملات؟",
@@ -1548,7 +1548,7 @@ const EmergencyDirectoryPage = () => {
             category: "المرافق والخدمات العامة",
             icon: "⚡",
             items: [
-                { name: "مشتكي المولدات المحلية", phone: "+96100000000", subtitle: "استفسارات وأعطال اشتراك الكهرباء" },
+                { name: "مشتكي المولدات المحلية", phone: "", subtitle: "استفسارات وأعطال اشتراك الكهرباء" },
                 { name: "مصلحة مياه لبنان الجنوبي", phone: "07 757 000", subtitle: "جدول وضخ مياه الشرب" },
                 { name: "مسؤول الصيانة والخدمات", phone: "70 388 073", subtitle: "أعطال الشبكة والإنارة العامة" },
             ]
@@ -1575,9 +1575,9 @@ const EmergencyDirectoryPage = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {group.items.map((item, itemIdx) => (
                                 <div key={itemIdx} className="bg-gray-50 p-5 rounded-xl border border-gray-200 flex flex-col justify-between hover:border-emerald-500 transition-colors">
-                                    <div>
+                                    <div className="text-center mb-4">
                                         <h4 className="font-bold text-gray-800 text-lg mb-1">{item.name}</h4>
-                                        <p className="text-sm text-gray-500 mb-4">{item.subtitle}</p>
+                                        <p className="text-sm text-gray-500">{item.subtitle}</p>
                                     </div>
                                     <a 
                                         href={`tel:${item.phone}`}
@@ -1586,6 +1586,7 @@ const EmergencyDirectoryPage = () => {
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                         </svg>
+                                        <span></span>
                                         <span dir="ltr" className="inline-block">{item.phone}</span>
                                     </a>
                                 </div>
